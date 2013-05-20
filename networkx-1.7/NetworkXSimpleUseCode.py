@@ -6,4 +6,4 @@ print(G.nodes())
 [1, 2, 'spam']
 print(G.edges())
 [(1, 2)]
-print ("Done!")
+print ("**Done!")
