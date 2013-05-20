@@ -1,3 +1,10 @@
+#DataFiles/Traces in DataFiles
+jumpDistanceHist
+jumpDistanceHist*
+locationHist
+locationHist*
+
+
 *.py[cod]
 
 # C extensions
