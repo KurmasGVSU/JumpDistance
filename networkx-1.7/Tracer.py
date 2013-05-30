@@ -1,6 +1,9 @@
-#import os
+import os
 import sys
 import random
+
+def cls():
+    os.system('cls')
 
 if len(sys.argv) < 3:
     print("Incorrect # of Input Arguments Found, closing...")
@@ -39,18 +42,46 @@ for line in locationHistFile:
 print("Input Libaries Created!")
 print("Attempting Brute Force Calculation of Trace...\n")
 
+#discSize = locationHistLib[-1]
+discSize = 2790133
+print "discSize:"+str(discSize)
+
+listOfSets = []
+counter = 0
 while (len(jumpDistanceList) != 0):
+    counter = counter + 1
     distance = jumpDistanceList[-1]
-    print "Jump Distance:"+str(distance)
-    tempkey = random.choice(locationHistLib.keys())
-    location = locationHistLib.pop(tempkey)
-    print str(location)+" Visits to Disc Index:"+str(tempkey)
-    jumpLoc = location+jumpDistanceList[-1]
-    #if jumpLoc is in location histogram remove both start and end jumps
-    #otherwise get a new start location
-    
-    break
+    #print "Jump Distance:"+str(distance)
+    firstLoc = random.choice(locationHistLib.keys())
+    visits = locationHistLib.get(firstLoc)
+    #print "Disc Index:"+str(firstLoc)+" has ("+str(visits)+") visits"
+    jumpLoc = (firstLoc+jumpDistanceList[-1]) % discSize
+    #print jumpLoc
+    if jumpLoc in locationHistLib:
+        #print "true"
+        listOfSets.append([firstLoc,jumpLoc,distance])
+        #print listOfSets
+        jumpDistanceList.remove(distance)
+        #remove firstLoc 
+        if visits > 1:
+            locationHistLib[firstLoc] = locationHistLib.get(firstLoc) -1
+        else:
+            locationHistLib.pop(firstLoc)
+            
+        visits = locationHistLib.get(jumpLoc)
+        if visits > 1:
+            locationHistLib[jumpLoc] = locationHistLib.get(jumpLoc) -1
+        else:
+            locationHistLib.pop(jumpLoc)
 
+        
+    else:
+        cls()
+        print counter
+        if (counter == 5000) or (len(jumpDistanceList) < 100):
+            print "limit reached, breaking"
+            break
 
+print listOfSets
 print ("\n**Done!")
 
