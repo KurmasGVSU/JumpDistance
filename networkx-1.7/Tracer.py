@@ -48,21 +48,24 @@ print "discSize:"+str(discSize)
 
 listOfSets = []
 counter = 0
+size = len(jumpDistanceList)
 while (len(jumpDistanceList) != 0):
     counter = counter + 1
-    distance = jumpDistanceList[-1]
-    #print "Jump Distance:"+str(distance)
     firstLoc = random.choice(locationHistLib.keys())
     visits = locationHistLib.get(firstLoc)
     #print "Disc Index:"+str(firstLoc)+" has ("+str(visits)+") visits"
-    jumpLoc = (firstLoc+jumpDistanceList[-1]) % discSize
-    #print jumpLoc
+    while True:
+        randIndex = random.randint(0,len(jumpDistanceList) -1)
+        distance = jumpDistanceList[randIndex]
+        jumpLoc = (firstLoc+distance) % discSize
+        if jumpLoc != firstLoc:
+            break
+    
     if jumpLoc in locationHistLib:
         #print "true"
         listOfSets.append([firstLoc,jumpLoc,distance])
-        #print listOfSets
+        print "["+str(firstLoc)+","+str(jumpLoc)+","+str(distance)+"] :"+str(len(jumpDistanceList))+"/"+str(size)
         jumpDistanceList.remove(distance)
-        #remove firstLoc 
         if visits > 1:
             locationHistLib[firstLoc] = locationHistLib.get(firstLoc) -1
         else:
@@ -76,12 +79,13 @@ while (len(jumpDistanceList) != 0):
 
         
     else:
-        cls()
-        print counter
-        if (counter == 5000) or (len(jumpDistanceList) < 100):
-            print "limit reached, breaking"
+        #cls()
+        #print counter
+        if (counter < -1) or (len(jumpDistanceList) < 5000):
             break
 
-print listOfSets
+#print listOfSets
+print "\nlimit reached, breaking..."
+print str(len(listOfSets))+" sets found after: "+str(counter)+" passes"
 print ("\n**Done!")
 
