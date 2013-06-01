@@ -1,6 +1,7 @@
 import os
 import sys
 import random
+import timeit
 
 def cls():
     os.system('cls')
@@ -21,71 +22,55 @@ locationHistFile = open(file2)
 print("Both files are open!")
 
 #parse jumpDistanceFile
-jumpDistanceList = []
+jdList = []
 for line in jumpDistanceFile:
     oneLine = line.split()
     oneLine.reverse()
     qty = int(oneLine.pop())
     distance = int(oneLine.pop())
     for x in range(0, qty):
-        jumpDistanceList.append(distance)
+        jdList.append(distance)
 
 #parse locationHistFile
-locationHistLib = {}
+locDict = {}
 for line in locationHistFile:
     oneLine = line.split()
     oneLine.reverse()
     qty = int(oneLine.pop())
     loc = int(oneLine.pop())
-    locationHistLib[loc] = qty
+    locDict[loc] = qty
+
+##locList = []
+##for line in locationHistFile:
+##    oneLine = line.split()
+##    oneLine.reverse()
+##    oneLine.pop() #throw away the qty
+##    loc = int(oneLine.pop())
+##    locList.append(loc)
 
 print("Input Libaries Created!")
-print("Attempting Brute Force Calculation of Trace...\n")
+print("Attempting Brute Force Calculation of Trace...")
+f = open("output.data", 'w') 
+indepSetStack = []
+startTime = timeit.default_timer()
+for startLoc in locDict:
+    checkTime = timeit.default_timer()
+    print "Time Elapsed:"+str(checkTime - startTime)
+    #insert file write and dump stack to prevent memory overflow
+    for jd in jdList:
+        if (startLoc+jd) in locDict.keys():
+            set = [startLoc,startLoc+jd,jd]
+            indepSetStack.append(set)
 
-#discSize = locationHistLib[-1]
-discSize = 2790133
-print "discSize:"+str(discSize)
 
-listOfSets = []
-counter = 0
-size = len(jumpDistanceList)
-while (len(jumpDistanceList) != 0):
-    counter = counter + 1
-    firstLoc = random.choice(locationHistLib.keys())
-    visits = locationHistLib.get(firstLoc)
-    #print "Disc Index:"+str(firstLoc)+" has ("+str(visits)+") visits"
-    while True:
-        randIndex = random.randint(0,len(jumpDistanceList) -1)
-        distance = jumpDistanceList[randIndex]
-        jumpLoc = (firstLoc+distance) % discSize
-        if jumpLoc != firstLoc:
-            break
-    
-    if jumpLoc in locationHistLib:
-        #print "true"
-        listOfSets.append([firstLoc,jumpLoc,distance])
-        print "["+str(firstLoc)+","+str(jumpLoc)+","+str(distance)+"] :"+str(len(jumpDistanceList))+"/"+str(size)
-        jumpDistanceList.remove(distance)
-        if visits > 1:
-            locationHistLib[firstLoc] = locationHistLib.get(firstLoc) -1
-        else:
-            locationHistLib.pop(firstLoc)
-            
-        visits = locationHistLib.get(jumpLoc)
-        if visits > 1:
-            locationHistLib[jumpLoc] = locationHistLib.get(jumpLoc) -1
-        else:
-            locationHistLib.pop(jumpLoc)
+print "Graph created..."
+print "printing to file"
 
-        
-    else:
-        #cls()
-        #print counter
-        if (counter < -1) or (len(jumpDistanceList) < 5000):
-            break
+f = open("output.data", 'w')         
+for triple in indepSetStack:
+    f.write(str(triple)+"\n")
+f.close()
 
-#print listOfSets
-print "\nlimit reached, breaking..."
-print str(len(listOfSets))+" sets found after: "+str(counter)+" passes"
+
 print ("\n**Done!")
 
