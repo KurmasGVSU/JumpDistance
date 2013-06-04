@@ -3,6 +3,7 @@ jumpDistanceHist
 jumpDistanceHist*
 locationHist
 locationHist*
+output.data
 
 
 *.py[cod]
