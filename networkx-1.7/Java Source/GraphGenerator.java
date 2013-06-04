@@ -5,7 +5,7 @@ public class GraphGenerator {
     private List<Pair> jd_hist;
     //private LinkedList<Pair> JD_histogram;
     private List<Pair> loc_Hist;
-    private HashMap loc_Map;
+    private HashMap<Integer, Integer> loc_Map;
     private static GraphGenerator gen;
     //private Pair start_object;
 
@@ -37,7 +37,7 @@ public class GraphGenerator {
             Triple tri;
             while (iter.hasNext()){
                 tri = iter.next();
-                writer.write(tri.start+" "+tri.mid+" "+ tri.end);
+                writer.write(tri.count + ": " + tri.start+" "+tri.mid+" "+ tri.end);
                 writer.newLine();
             }
         } catch (Exception e){
@@ -82,24 +82,36 @@ public class GraphGenerator {
         Iterator<Pair> locIter = locHist.iterator();
         Iterator<Pair> jdIter;
         int startLoc, jd, finalLoc;
+	int startCount, jdCount, finalCount;
+	int total_vertices = 0;
+	int total_lines = 0;
         while (locIter.hasNext()){
-            startLoc = locIter.next().second;
+	    Pair start = locIter.next();
+            startLoc = start.second;
+	    startCount = start.first;
             jdIter = jdHist.iterator();
             while (jdIter.hasNext()){
-                jd = jdIter.next().second;
+		Pair jdPair = jdIter.next();
+                jd = jdPair.second;
+		jdCount = jdPair.first;
                 finalLoc = startLoc+jd;
                 if (loc_Map.containsKey(finalLoc)){
                     //System.out.println("["+startLoc+","+jd+","+finalLoc+"]");
-                    graph.add(new Triple(startLoc,jd,finalLoc));
+		    finalCount = loc_Map.get(finalLoc);
+		    int copies = (startCount*jdCount*finalCount);
+                    graph.add(new Triple(startLoc,jd,finalLoc,copies ));
+		    total_vertices += copies;
+		    total_lines++;
                 }
             }
         }
+	System.out.printf("Total vertices: %d\tTotal lines:  %d\n", total_vertices, total_lines);
         return graph;
     }
 
 
-    private HashMap createMap(List<Pair> locHist){
-        HashMap map = new HashMap(locHist.size());
+    private HashMap<Integer, Integer> createMap(List<Pair> locHist){
+        HashMap<Integer, Integer> map = new HashMap<Integer, Integer>(locHist.size());
         Iterator<Pair> locIter = locHist.iterator();
         Pair tPair;
         while(locIter.hasNext()){
@@ -111,7 +123,7 @@ public class GraphGenerator {
     }
 }
 class Triple implements Comparable<Triple> {
-    public int start, mid, end;
+    public int start, mid, end, count;
 
     public Triple(){}
 
@@ -119,6 +131,12 @@ class Triple implements Comparable<Triple> {
         this.start = start;
         this.mid = mid;
         this.end = end;
+    }
+
+    public Triple(int start, int mid, int end, int count) {
+	this(start, mid, end);
+	this.count = count;
+	   
     }
 
     @Override
