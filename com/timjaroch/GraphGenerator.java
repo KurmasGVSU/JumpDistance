@@ -1,4 +1,7 @@
+package com.timjaroch;
+
 import java.io.*;
+import java.lang.System;
 import java.util.*;
 
 public class GraphGenerator {
@@ -8,6 +11,7 @@ public class GraphGenerator {
     private HashMap loc_Map;
     private static GraphGenerator gen;
     //private Pair start_object;
+    private static String workingDir = "\\GitHub\\JumpDistance\\data\\";
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -21,12 +25,39 @@ public class GraphGenerator {
             System.out.println("No arguments specified exiting..");
         } else {
             System.out.println("Arguments found, attempting to open files...");
-            this.loc_Hist = gen.readFile(args[0], " Location: ");
-            this.jd_hist = gen.readFile(args[1], " Distance: ");
+            gen.readTrace("OpenMail_LU056000_trace");
+            //this.loc_Hist = gen.readFile(args[0], " Location: ");
+            //this.jd_hist = gen.readFile(args[1], " Distance: ");
         }
-        this.loc_Map = createMap(loc_Hist);
-        writeFile(correlatedGraph(loc_Hist, jd_hist), "output.data");
-        System.out.println("DONE!!!!!");
+        //this.loc_Map = createMap(loc_Hist);
+        //writeFile(correlatedGraph(loc_Hist, jd_hist), "output.data");
+        //System.out.println("DONE!!!!!");
+    }
+
+    private void readTrace(String fileName){
+        String oneLine;
+        int startLoc, endLoc;
+        try{
+            File inputFile = new File(workingDir+File.separator+fileName);
+            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+            System.out.println("'"+inputFile.getName()+"' successfully opened!");
+            oneLine = reader.readLine();
+            while (oneLine != null){
+                oneLine = oneLine.trim();
+                oneLine = oneLine.replaceAll("\\s+", " ");
+                startLoc = Integer.parseInt(oneLine.split(" ")[1]);
+                endLoc = Integer.parseInt(oneLine.split(" ")[2]);
+                //System.out.println(oneLine.split(" ")[1]);
+                //System.out.println(oneLine.split(" ")[2]);
+                System.out.println("start:"+startLoc+" end:"+endLoc);
+                oneLine = reader.readLine();
+            }
+        } catch (Exception e){
+            System.out.println(e);
+            System.out.println("Error Reading File");
+            System.out.print("Exiting...");
+            System.exit(1);
+        }
     }
 
     private boolean writeFile(List<Triple> outputList, String fileName){
