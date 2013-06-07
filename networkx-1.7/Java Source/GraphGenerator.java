@@ -85,11 +85,14 @@ public class GraphGenerator {
 	int startCount, jdCount, finalCount;
 	int total_vertices = 0;
 	int total_lines = 0;
+	// YYY Here you can create a counter for start location, end location, and jump distance.
+
         while (locIter.hasNext()){
 	    Pair start = locIter.next();
             startLoc = start.second;
 	    startCount = start.first;
             jdIter = jdHist.iterator();
+	    // YYY reset the jump distance counter
             while (jdIter.hasNext()){
 		Pair jdPair = jdIter.next();
                 jd = jdPair.second;
@@ -99,6 +102,11 @@ public class GraphGenerator {
                     //System.out.println("["+startLoc+","+jd+","+finalLoc+"]");
 		    finalCount = loc_Map.get(finalLoc);
 		    int copies = (startCount*jdCount*finalCount);
+
+
+		    // YYY At this point, instead of creating a single Triple with a count, 
+		    // Use a loop to create "copies" Triples, each with its own combination of unique values.
+		    // The think you'll have to think most carefully about is when exactly to increment and reset the counters.
                     graph.add(new Triple(startLoc,jd,finalLoc,copies ));
 		    total_vertices += copies;
 		    total_lines++;
