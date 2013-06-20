@@ -5,13 +5,19 @@ import java.lang.System;
 import java.util.*;
 
 public class GraphGenerator {
-    private List<Pair> jd_hist;
-    //private LinkedList<Pair> JD_histogram;
-    private List<Pair> loc_Hist;
-    private HashMap loc_Map;
+    private HashMap<Integer, Integer> jd_map;
+    private HashMap<Integer, Integer> loc_map;
+    private HashSet<Integer> jd_set;
+    private HashSet<Integer> loc_set;
+    private ArrayList<Integer> jd_list;
+    private ArrayList<Integer> loc_list;
+
+    private int vertices;
+    private int edges;
+
     private static GraphGenerator gen;
-    //private Pair start_object;
-    private static String workingDir = "\\GitHub\\JumpDistance\\data\\";
+
+    private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -24,8 +30,12 @@ public class GraphGenerator {
         if (args.length == 0){
             System.out.println("No arguments specified exiting..");
         } else {
-            System.out.println("Arguments found, attempting to open files...");
-            gen.readTrace("OpenMail_LU056000_trace");
+            System.out.println("Arguments found, attempting to open \'"+ WORKING_DIR +args[0]+"\'");
+            gen.readTrace(args[0]);
+            //Collections.sort(loc_list);
+            //System.out.println(loc_list.toString());
+            createJumpSet(jd_map, loc_map);
+            //gen.readTrace("OpenMail_LU056000_trace");
             //this.loc_Hist = gen.readFile(args[0], " Location: ");
             //this.jd_hist = gen.readFile(args[1], " Distance: ");
         }
@@ -35,21 +45,41 @@ public class GraphGenerator {
     }
 
     private void readTrace(String fileName){
+        jd_map = new HashMap<Integer, Integer>();
+        loc_map = new HashMap<Integer, Integer>();
+        jd_set = new HashSet<Integer>();
+        loc_set = new HashSet<Integer>();
+        jd_list = new ArrayList<Integer>();
+        loc_list = new ArrayList<Integer>();
         String oneLine;
-        int startLoc, endLoc;
+        int startLoc, nextLoc, jump;
         try{
-            File inputFile = new File(workingDir+File.separator+fileName);
+            File inputFile = new File(WORKING_DIR +File.separator+fileName);
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));
-            System.out.println("'"+inputFile.getName()+"' successfully opened!");
+            System.out.println("'"+inputFile.getName()+"' found and successfully opened!");
+            oneLine = reader.readLine();
+            oneLine = oneLine.trim().replaceAll("\\s+", " ");
+            startLoc = Integer.parseInt(oneLine.split(" ")[1]);
             oneLine = reader.readLine();
             while (oneLine != null){
-                oneLine = oneLine.trim();
-                oneLine = oneLine.replaceAll("\\s+", " ");
-                startLoc = Integer.parseInt(oneLine.split(" ")[1]);
-                endLoc = Integer.parseInt(oneLine.split(" ")[2]);
-                //System.out.println(oneLine.split(" ")[1]);
-                //System.out.println(oneLine.split(" ")[2]);
-                System.out.println("start:"+startLoc+" end:"+endLoc);
+                oneLine = oneLine.trim().replaceAll("\\s+", " ");
+                nextLoc = Integer.parseInt(oneLine.split(" ")[1]);
+                jump = startLoc - nextLoc;
+                if (jd_map.containsKey(jump)){
+                    jd_map.put(jump, jd_map.get(jump)+1);
+                } else
+                    jd_map.put(jump, 0);
+
+                if (loc_map.containsKey(startLoc)){
+                    loc_map.put(startLoc, loc_map.get(startLoc)+1);
+                } else
+                    loc_map.put(startLoc, 0);
+
+                jd_list.add(jump);
+                jd_set.add(jump);
+                loc_list.add(startLoc);
+                loc_set.add(startLoc);
+                startLoc = nextLoc;
                 oneLine = reader.readLine();
             }
         } catch (Exception e){
@@ -58,6 +88,7 @@ public class GraphGenerator {
             System.out.print("Exiting...");
             System.exit(1);
         }
+        System.out.println("Jump Distance and Location Histograms Created Successfully.");
     }
 
     private boolean writeFile(List<Triple> outputList, String fileName){
@@ -81,66 +112,72 @@ public class GraphGenerator {
         return true;
     }
 
-    private List<Pair> readFile(String fileName, String identifier){
-        List<Pair> histogram = new LinkedList<Pair>();
-        String oneLine;
-        int count, location;
-        try{
-            File inputFile = new File(fileName);
-            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
-            System.out.println("'"+inputFile.getName()+"' successfully opened!");
-            oneLine = reader.readLine();
-            while(oneLine != null){
-                oneLine = oneLine.trim();
-                count = Integer.parseInt(oneLine.split(" ")[0]);
-                location = Integer.parseInt(oneLine.split(" ")[1]);
-                //System.out.println(oneLine+": count:"+count+identifier+location);
-                histogram.add(new Pair(count, location));
-                oneLine = reader.readLine();
-            }
-            System.out.println("All lines successfully read!");
-        } catch (Exception e){
-            System.out.println(e);
-            System.out.println("Error Reading File");
-            System.out.print("Exiting...");
-            System.exit(1);
-        }
-        return histogram;
-    }
-
-    private List<Triple> correlatedGraph(List<Pair> locHist, List<Pair> jdHist){
-        List<Triple> graph = new LinkedList<Triple>();
-        Iterator<Pair> locIter = locHist.iterator();
-        Iterator<Pair> jdIter;
+    private HashSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations) {
+        HashSet<Node> jumpSet = new HashSet<Node>();
+        Iterator<Integer> locIter = locations.keySet().iterator();
+        Iterator<Integer> jdIter;
         int startLoc, jd, finalLoc;
-        while (locIter.hasNext()){
-            startLoc = locIter.next().second;
-            jdIter = jdHist.iterator();
-            while (jdIter.hasNext()){
-                jd = jdIter.next().second;
-                finalLoc = startLoc+jd;
-                if (loc_Map.containsKey(finalLoc)){
+        int copies;
+
+        while (locIter.hasNext()) {
+            startLoc = locIter.next();
+            jdIter = jumps.keySet().iterator();
+            while (jdIter.hasNext()) {
+                jd = jdIter.next();
+                finalLoc = startLoc + jd;
+                if (locations.containsKey(finalLoc)) {
                     //System.out.println("["+startLoc+","+jd+","+finalLoc+"]");
-                    graph.add(new Triple(startLoc,jd,finalLoc));
+                    //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+                    copies = locations.get(startLoc);
+                    if (jumps.get(jd) < copies)
+                        copies = jumps.get(jd);
+                    if (locations.get(finalLoc) < copies)
+                        copies = locations.get(finalLoc);
+                    vertices = vertices+copies;
+                    /*
+                    for (int copy = copies; copy > 0; copy--){
+                        jumpSet.add(new Node(startLoc, jd, finalLoc, copy));
+                        //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
+                    }*/
                 }
             }
         }
-        return graph;
+        //vertices = jumpSet.size();
+        System.out.println("Vertices:"+vertices);
+        return jumpSet;
     }
 
-
-    private HashMap createMap(List<Pair> locHist){
-        HashMap map = new HashMap(locHist.size());
-        Iterator<Pair> locIter = locHist.iterator();
-        Pair tPair;
-        while(locIter.hasNext()){
-            tPair = locIter.next();
-            map.put(tPair.second, tPair.first);
-        }
+    private HashSet<Pair> createMap(HashSet<Triple> jumpSet){
+        Iterator<Triple> jsIter = jumpSet.iterator();
+        //Do Magic
+        //Maybe this should be done in Python....
         System.out.println("Map succesfully created and populated with valid locations");
-        return map;
+        return null;
+    }
+
+    private void printCounts(){
+
     }
 }
+
+class Node implements Comparable<Node>{
+    public int startLoc, jumpDistance, endLocation, id;
+
+    public Node(){}
+
+    public Node(int start, int jump, int end, int id){
+        this.startLoc = start;
+        this.jumpDistance = jump;
+        this.endLocation = end;
+        this.id = id;
+    }
+
+    @Override
+    public int compareTo(Node o) {
+        return startLoc - o.startLoc;
+    }
+}
+
 class Triple implements Comparable<Triple> {
     public int start, mid, end;
 
@@ -158,17 +195,49 @@ class Triple implements Comparable<Triple> {
     }
 }
 class Pair implements Comparable<Pair>{
-    public int first, second;
+    public int key, count;
 
     public Pair(){}
 
-    public Pair(int first, int second){
-        this.first = first;
-        this.second = second;
+    public Pair(int key, int count){
+        this.key = key;
+        this.count = count;
     }
 
     @Override
     public int compareTo(Pair o) {
-        return this.second - o.second;
+        return this.key - o.key;
     }
 }
+
+/**
+ * \/ OLD CODE \/
+ */
+
+/**
+ private List<Pair> readFile(String fileName, String identifier){
+ List<Pair> histogram = new LinkedList<Pair>();
+ String oneLine;
+ int count, location;
+ try{
+ File inputFile = new File(fileName);
+ BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+ System.out.println("'"+inputFile.getName()+"' successfully opened!");
+ oneLine = reader.readLine();
+ while(oneLine != null){
+ oneLine = oneLine.trim();
+ count = Integer.parseInt(oneLine.split(" ")[0]);
+ location = Integer.parseInt(oneLine.split(" ")[1]);
+ //System.out.println(oneLine+": count:"+count+identifier+location);
+ histogram.add(new Pair(count, location));
+ oneLine = reader.readLine();
+ }
+ System.out.println("All lines successfully read!");
+ } catch (Exception e){
+ System.out.println(e);
+ System.out.println("Error Reading File");
+ System.out.print("Exiting...");
+ System.exit(1);
+ }
+ return histogram;
+ }**/
