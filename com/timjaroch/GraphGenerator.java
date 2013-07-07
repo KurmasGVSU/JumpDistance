@@ -18,6 +18,7 @@ public class GraphGenerator {
     private static GraphGenerator gen;
 
     private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
+    private static final int LINES_TO_READ = 500;
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -31,14 +32,15 @@ public class GraphGenerator {
             System.out.println("No arguments specified exiting..");
         } else {
             System.out.println("Arguments found, attempting to open \'"+ WORKING_DIR +args[0]+"\'");
-            gen.readTrace(args[0]);
-            //Collections.sort(loc_list);
-            //System.out.println(loc_list.toString());
-            createJumpSet(jd_map, loc_map);
-            //gen.readTrace("OpenMail_LU056000_trace");
-            //this.loc_Hist = gen.readFile(args[0], " Location: ");
-            //this.jd_hist = gen.readFile(args[1], " Distance: ");
+            gen.readTrace(args[0]);     //gen.readTrace("OpenMail_LU056000_trace");
+            //createJumpSet(jd_map, loc_map);
+            //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
         }
+        HashSet<Node> jS1 = createJumpSet(jd_map, loc_map);
+        HashSet<Edge> eS1 = createEdgeSet(jS1, 0);
+        HashSet<Edge> eS2 = createEdgeSet(jS1, 1);
+        System.out.println(eS1.size());
+        System.out.println(eS2.size());
         //this.loc_Map = createMap(loc_Hist);
         //writeFile(correlatedGraph(loc_Hist, jd_hist), "output.data");
         //System.out.println("DONE!!!!!");
@@ -52,7 +54,7 @@ public class GraphGenerator {
         jd_list = new ArrayList<Integer>();
         loc_list = new ArrayList<Integer>();
         String oneLine;
-        int startLoc, nextLoc, jump;
+        int startLoc, nextLoc, jump, linesRead = 0;
         try{
             File inputFile = new File(WORKING_DIR +File.separator+fileName);
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));
@@ -60,8 +62,8 @@ public class GraphGenerator {
             oneLine = reader.readLine();
             oneLine = oneLine.trim().replaceAll("\\s+", " ");
             startLoc = Integer.parseInt(oneLine.split(" ")[1]);
-            oneLine = reader.readLine();
-            while (oneLine != null){
+            oneLine = reader.readLine(); linesRead++;
+            while (oneLine != null && linesRead != LINES_TO_READ){
                 oneLine = oneLine.trim().replaceAll("\\s+", " ");
                 nextLoc = Integer.parseInt(oneLine.split(" ")[1]);
                 jump = startLoc - nextLoc;
@@ -80,7 +82,7 @@ public class GraphGenerator {
                 loc_list.add(startLoc);
                 loc_set.add(startLoc);
                 startLoc = nextLoc;
-                oneLine = reader.readLine();
+                oneLine = reader.readLine(); linesRead++;
             }
         } catch (Exception e){
             System.out.println(e);
@@ -134,11 +136,11 @@ public class GraphGenerator {
                     if (locations.get(finalLoc) < copies)
                         copies = locations.get(finalLoc);
                     vertices = vertices+copies;
-                    /*
+
                     for (int copy = copies; copy > 0; copy--){
                         jumpSet.add(new Node(startLoc, jd, finalLoc, copy));
                         //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
-                    }*/
+                    }
                 }
             }
         }
@@ -147,17 +149,30 @@ public class GraphGenerator {
         return jumpSet;
     }
 
-    private HashSet<Pair> createMap(HashSet<Triple> jumpSet){
-        Iterator<Triple> jsIter = jumpSet.iterator();
-        //Do Magic
-        //Maybe this should be done in Python....
-        System.out.println("Map succesfully created and populated with valid locations");
-        return null;
+    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, int type){
+        HashSet<Edge> edgeSet = new HashSet<Edge>();
+            for (Node n1 :jumpSet){
+                for (Node n2: jumpSet){
+                    if (type != 0){
+                        if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
+                            edgeSet.add(new Edge(n1, n2));
+                        }
+                    } else {
+                        if ((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation))
+                            edgeSet.add(new Edge(n1, n2));
+                    }
+                }
+            }
+        return edgeSet;
     }
 
-    private void printCounts(){
+    /**
+     1)
+     v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end)
 
-    }
+     2)
+     v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end)
+     */
 }
 
 class Node implements Comparable<Node>{
@@ -175,6 +190,23 @@ class Node implements Comparable<Node>{
     @Override
     public int compareTo(Node o) {
         return startLoc - o.startLoc;
+    }
+}
+
+class Edge{
+    public Node n1, n2;
+
+    public Edge(){}
+
+    public Edge(Node n1, Node n2){
+        this.n1 = n1;
+        this.n2 = n2;
+    }
+
+    @Override
+    public String toString(){
+        String val = n1.startLoc+","+n2.startLoc;
+        return val;
     }
 }
 
