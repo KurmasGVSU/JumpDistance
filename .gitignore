@@ -1,10 +1,9 @@
 #DataFiles/Traces in DataFiles
-jumpDistanceHist
-jumpDistanceHist*
-locationHist
-locationHist*
+*.class
 output.data
-
+out/
+.idea/
+junk/
 
 *.py[cod]
 

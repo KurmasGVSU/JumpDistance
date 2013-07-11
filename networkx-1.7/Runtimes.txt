@@ -1,6 +1,0 @@
-with nested loops and 123s
-with key lookup 27s
-
-15054*27 = 406458s
-6774.3 minutes
-112 hours

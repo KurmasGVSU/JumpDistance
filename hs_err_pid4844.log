@@ -1,0 +1,126 @@
+#
+# There is insufficient memory for the Java Runtime Environment to continue.
+# Native memory allocation (malloc) failed to allocate 4088 bytes for char in c:\jdk7u1_64p\jdk7u3\hotspot\src\share\vm\utilities/stack.inline.hpp
+# Possible reasons:
+#   The system is out of physical RAM or swap space
+#   In 32 bit mode, the process size limit was hit
+# Possible solutions:
+#   Reduce memory load on the system
+#   Increase physical memory or swap space
+#   Check if swap backing store is full
+#   Use 64 bit Java on a 64 bit OS
+#   Decrease Java heap size (-Xmx/-Xms)
+#   Decrease number of Java threads
+#   Decrease Java thread stack sizes (-Xss)
+#   Set larger code cache with -XX:ReservedCodeCacheSize=
+# This output file may be truncated or incomplete.
+#
+#  Out of Memory Error (memory/allocation.inline.hpp:58), pid=4844, tid=3176
+#
+# JRE version: 7.0_03-b05
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (22.1-b02 mixed mode windows-amd64 compressed oops)
+# Failed to write core dump. Minidumps are not enabled by default on client versions of Windows
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0000000002209000):  VMThread [stack: 0x0000000007970000,0x0000000007a70000] [id=3176]
+
+Stack: [0x0000000007970000,0x0000000007a70000]
+VM_Operation (0x00000000025aea80): ParallelGCFailedAllocation, mode: safepoint, requested by thread 0x00000000022bc000
+
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+  0x0000000007359000 JavaThread "Monitor Ctrl-Break" daemon [_thread_in_native, id=4436, stack(0x0000000008660000,0x0000000008760000)]
+  0x00000000072ad000 JavaThread "Service Thread" daemon [_thread_blocked, id=2376, stack(0x0000000008480000,0x0000000008580000)]
+  0x00000000072aa000 JavaThread "C2 CompilerThread1" daemon [_thread_blocked, id=4960, stack(0x00000000081d0000,0x00000000082d0000)]
+  0x00000000072a5000 JavaThread "C2 CompilerThread0" daemon [_thread_blocked, id=4800, stack(0x0000000007fe0000,0x00000000080e0000)]
+  0x00000000072a3800 JavaThread "Attach Listener" daemon [_thread_blocked, id=4736, stack(0x0000000007c60000,0x0000000007d60000)]
+  0x000000000729e000 JavaThread "Signal Dispatcher" daemon [_thread_blocked, id=3324, stack(0x0000000007dc0000,0x0000000007ec0000)]
+  0x0000000002217000 JavaThread "Finalizer" daemon [_thread_blocked, id=4664, stack(0x0000000007b60000,0x0000000007c60000)]
+  0x0000000002210800 JavaThread "Reference Handler" daemon [_thread_blocked, id=4184, stack(0x0000000007860000,0x0000000007960000)]
+  0x00000000022bc000 JavaThread "main" [_thread_blocked, id=2524, stack(0x00000000024b0000,0x00000000025b0000)]
+
+Other Threads:
+=>0x0000000002209000 VMThread [stack: 0x0000000007970000,0x0000000007a70000] [id=3176]
+  0x00000000072c7800 WatcherThread [stack: 0x00000000082f0000,0x00000000083f0000] [id=3704]
+
+VM state:at safepoint (normal execution)
+
+VM Mutex/Monitor currently owned by a thread:  ([mutex/lock_event])
+[0x00000000022ba4c0] Threads_lock - owner thread: 0x0000000002209000
+[0x00000000022ba9c0] Heap_lock - owner thread: 0x00000000022bc000
+
+Heap
+ PSYoungGen      total 799232K, used 334240K [0x0000000780000000, 0x00000007db850000, 0x0000000800000000)
+  eden space 100224K, 0% used [0x0000000780000000,0x0000000780000000,0x00000007861e0000)
+  from space 699008K, 47% used [0x00000007b0c80000,0x00000007c52e8000,0x00000007db720000)
+  to   space 699008K, 0% used [0x00000007861e0000,0x00000007861e0000,0x00000007b0c80000)
+ PSOldGen        total 4110848K, used 3816259K [0x0000000680000000, 0x000000077ae80000, 0x0000000780000000)
+  object space 4110848K, 92% used [0x0000000680000000,0x0000000768ed0f18,0x000000077ae80000)
+ PSPermGen       total 21248K, used 3147K [0x000000067ae00000, 0x000000067c2c0000, 0x0000000680000000)
+  object space 21248K, 14% used [0x000000067ae00000,0x000000067b112d58,0x000000067c2c0000)
+
+Code Cache  [0x00000000025b0000, 0x0000000002820000, 0x00000000055b0000)
+ total_blobs=262 nmethods=75 adapters=139 free_code_cache=48619Kb largest_free_block=49758912
+
+Dynamic libraries:
+0x000000013fe50000 - 0x000000013fe83000 	C:\Program Files\Java\jdk1.7.0_03\bin\java.exe
+0x0000000077960000 - 0x0000000077b09000 	C:\Windows\SYSTEM32\ntdll.dll
+0x0000000077840000 - 0x000000007795f000 	C:\Windows\system32\kernel32.dll
+0x000007fefdac0000 - 0x000007fefdb2b000 	C:\Windows\system32\KERNELBASE.dll
+0x000007fefef20000 - 0x000007fefeffb000 	C:\Windows\system32\ADVAPI32.dll
+0x000007fefdb90000 - 0x000007fefdc2f000 	C:\Windows\system32\msvcrt.dll
+0x000007feff190000 - 0x000007feff1af000 	C:\Windows\SYSTEM32\sechost.dll
+0x000007feff220000 - 0x000007feff34d000 	C:\Windows\system32\RPCRT4.dll
+0x0000000077740000 - 0x000000007783a000 	C:\Windows\system32\USER32.dll
+0x000007feffaa0000 - 0x000007feffb07000 	C:\Windows\system32\GDI32.dll
+0x000007fefdc30000 - 0x000007fefdc3e000 	C:\Windows\system32\LPK.dll
+0x000007fefeaf0000 - 0x000007fefebb9000 	C:\Windows\system32\USP10.dll
+0x000007fefc1f0000 - 0x000007fefc3e4000 	C:\Windows\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.7601.17514_none_fa396087175ac9ac\COMCTL32.dll
+0x000007feff110000 - 0x000007feff181000 	C:\Windows\system32\SHLWAPI.dll
+0x000007feffa70000 - 0x000007feffa9e000 	C:\Windows\system32\IMM32.DLL
+0x000007feff000000 - 0x000007feff109000 	C:\Windows\system32\MSCTF.dll
+0x0000000063b50000 - 0x0000000063c21000 	C:\Program Files\Java\jdk1.7.0_03\jre\bin\msvcr100.dll
+0x000000005e7b0000 - 0x000000005ee8a000 	C:\Program Files\Java\jdk1.7.0_03\jre\bin\server\jvm.dll
+0x000007fefb1f0000 - 0x000007fefb1f9000 	C:\Windows\system32\WSOCK32.dll
+0x000007feff7f0000 - 0x000007feff83d000 	C:\Windows\system32\WS2_32.dll
+0x000007feff1b0000 - 0x000007feff1b8000 	C:\Windows\system32\NSI.dll
+0x000007fefa410000 - 0x000007fefa44b000 	C:\Windows\system32\WINMM.dll
+0x0000000077b20000 - 0x0000000077b27000 	C:\Windows\system32\PSAPI.DLL
+0x00000000645d0000 - 0x00000000645df000 	C:\Program Files\Java\jdk1.7.0_03\jre\bin\verify.dll
+0x00000000645a0000 - 0x00000000645c8000 	C:\Program Files\Java\jdk1.7.0_03\jre\bin\java.dll
+0x0000000064580000 - 0x0000000064595000 	C:\Program Files\Java\jdk1.7.0_03\jre\bin\zip.dll
+0x000007fefc1c0000 - 0x000007fefc1d0000 	D:\Program Files (x86)\JetBrains\IntelliJ IDEA Community Edition 12.1.3\bin\breakgen64.dll
+0x0000000064560000 - 0x0000000064579000 	C:\Program Files\Java\jdk1.7.0_03\jre\bin\net.dll
+0x000007fefd040000 - 0x000007fefd095000 	C:\Windows\system32\mswsock.dll
+0x000007fefd150000 - 0x000007fefd157000 	C:\Windows\System32\wship6.dll
+
+VM Arguments:
+jvm_args: -Xmx6g -Didea.launcher.port=7532 -Didea.launcher.bin.path=D:\Program Files (x86)\JetBrains\IntelliJ IDEA Community Edition 12.1.3\bin -Dfile.encoding=UTF-8 
+java_command: com.intellij.rt.execution.application.AppMain com.timjaroch.GraphGenerator OpenMail_LU056000_trace
+Launcher Type: SUN_STANDARD
+
+Environment Variables:
+PATH=D:\Program Files (x86)\JetBrains\IntelliJ IDEA Community Edition 12.1.3\bin\..\.\bin;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;D:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v5.0\bin\;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v5.0\libnvvp\;C:\Program Files\Common Files\Microsoft Shared\Windows Live;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\Autodesk\Backburner\;C:\Program Files\Common Files\Autodesk Shared\;D:\MinGW\bin;D:\msys\1.0\bin;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Python27-64;C:\Program Files\Java\jdk1.7.0_03\bin;C:\Program Files\Common Files\Microsoft Shared\Windows Live;d:\program files (x86)\jetbrains\intellij idea community edition 12.1.3\jre\jre\bin
+USERNAME=Jaroch
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 42 Stepping 7, GenuineIntel
+
+
+
+---------------  S Y S T E M  ---------------
+
+OS: Windows 7 , 64 bit Build 7601 Service Pack 1
+
+CPU:total 4 (4 cores per cpu, 1 threads per core) family 6 model 42 stepping 7, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt
+
+Memory: 4k page, physical 8371292k(563904k free), swap 8369432k(5012k free)
+
+vm_info: Java HotSpot(TM) 64-Bit Server VM (22.1-b02) for windows-amd64 JRE (1.7.0_03-b05), built on Feb  3 2012 20:43:56 by "java_re" with unknown MS VC++:1600
+
+time: Sun Jul 07 11:22:51 2013
+elapsed time: 114 seconds
+
