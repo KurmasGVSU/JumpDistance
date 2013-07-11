@@ -12,6 +12,8 @@ public class GraphGenerator {
     private ArrayList<Integer> jd_list;
     private ArrayList<Integer> loc_list;
 
+    private enum EdgeRule { COMPATIBLE, INCOMPATIBLE }
+
     private int vertices;
     private int edges;
 
@@ -37,8 +39,8 @@ public class GraphGenerator {
             //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
         }
         HashSet<Node> jS1 = createJumpSet(jd_map, loc_map);
-        HashSet<Edge> eS1 = createEdgeSet(jS1, 0);
-        HashSet<Edge> eS2 = createEdgeSet(jS1, 1);
+        HashSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, true);
+        HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, true);
         System.out.println(eS1.size());
         System.out.println(eS2.size());
         //this.loc_Map = createMap(loc_Hist);
@@ -56,7 +58,11 @@ public class GraphGenerator {
         String oneLine;
         int startLoc, nextLoc, jump, linesRead = 0;
         try{
-            File inputFile = new File(WORKING_DIR +File.separator+fileName);
+	    String fullFilePath = fileName;
+	    if (!fileName.startsWith("/")) {
+		fullFilePath = WORKING_DIR +File.separator+fileName;
+	    }
+            File inputFile = new File(fullFilePath);
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));
             System.out.println("'"+inputFile.getName()+"' found and successfully opened!");
             oneLine = reader.readLine();
@@ -70,12 +76,12 @@ public class GraphGenerator {
                 if (jd_map.containsKey(jump)){
                     jd_map.put(jump, jd_map.get(jump)+1);
                 } else
-                    jd_map.put(jump, 0);
+                    jd_map.put(jump, 1);
 
                 if (loc_map.containsKey(startLoc)){
                     loc_map.put(startLoc, loc_map.get(startLoc)+1);
                 } else
-                    loc_map.put(startLoc, 0);
+                    loc_map.put(startLoc, 1);
 
                 jd_list.add(jump);
                 jd_set.add(jump);
@@ -128,13 +134,17 @@ public class GraphGenerator {
                 jd = jdIter.next();
                 finalLoc = startLoc + jd;
                 if (locations.containsKey(finalLoc)) {
-                    //System.out.println("["+startLoc+","+jd+","+finalLoc+"]");
-                    //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+                    
+		    copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+		    /*
                     copies = locations.get(startLoc);
-                    if (jumps.get(jd) < copies)
+                    if (jumps.get(jd) < copies) {
                         copies = jumps.get(jd);
-                    if (locations.get(finalLoc) < copies)
+		    }
+                    if (locations.get(finalLoc) < copies) {
                         copies = locations.get(finalLoc);
+		    }
+		    */
                     vertices = vertices+copies;
 
                     for (int copy = copies; copy > 0; copy--){
@@ -145,24 +155,39 @@ public class GraphGenerator {
             }
         }
         //vertices = jumpSet.size();
-        System.out.println("Vertices:"+vertices);
+        System.out.println("Vertices: " + vertices);
+	System.out.println("Set size: " + jumpSet.size());
         return jumpSet;
     }
 
-    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, int type){
+    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule type, boolean countOnly){
         HashSet<Edge> edgeSet = new HashSet<Edge>();
+	int count = 0;
             for (Node n1 :jumpSet){
                 for (Node n2: jumpSet){
-                    if (type != 0){
+                    if (type == EdgeRule.COMPATIBLE){
                         if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
-                            edgeSet.add(new Edge(n1, n2));
+			    if (!countOnly)  {
+				edgeSet.add(new Edge(n1, n2));
+			    }
+			    count++;
                         }
                     } else {
-                        if ((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation))
-                            edgeSet.add(new Edge(n1, n2));
+                        if ((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) {
+			    if (!countOnly) {
+				edgeSet.add(new Edge(n1, n2));
+			    }
+			count++;
+			}
                     }
+	    if (count % 1000000 == 0) {
+		System.out.print(".");
+		//	System.out.println(count  + " so far");
+	    }
                 }
             }
+
+	    System.out.println("\nNumber of edges: " + count);
         return edgeSet;
     }
 
