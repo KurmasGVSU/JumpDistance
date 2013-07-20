@@ -20,7 +20,7 @@ public class GraphGenerator {
     private static GraphGenerator gen;
 
     private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
-    private static final int LINES_TO_READ = 500;
+    private static final int LINES_TO_READ = 200;
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -122,68 +122,95 @@ public class GraphGenerator {
 
     private HashSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations) {
         HashSet<Node> jumpSet = new HashSet<Node>();
-        Iterator<Integer> locIter = locations.keySet().iterator();
-        Iterator<Integer> jdIter;
-        int startLoc, jd, finalLoc;
-        int copies;
-
-        while (locIter.hasNext()) {
-            startLoc = locIter.next();
-            jdIter = jumps.keySet().iterator();
-            while (jdIter.hasNext()) {
-                jd = jdIter.next();
-                finalLoc = startLoc + jd;
-                if (locations.containsKey(finalLoc)) {
-                    
-		    copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
-		    /*
-                    copies = locations.get(startLoc);
-                    if (jumps.get(jd) < copies) {
-                        copies = jumps.get(jd);
-		    }
-                    if (locations.get(finalLoc) < copies) {
-                        copies = locations.get(finalLoc);
-		    }
-		    */
-                    vertices = vertices+copies;
-
-                    for (int copy = copies; copy > 0; copy--){
-                        jumpSet.add(new Node(startLoc, jd, finalLoc, copy));
-                        //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
+        Collections.sort(loc_list);
+        Collections.sort(jd_list);
+        int el;
+        for (int sl : loc_list){
+            for (int jd : jd_list){
+                el = sl+jd;
+                if (loc_list.contains(el)){
+                    for (int x = loc_list.indexOf(sl); x < loc_list.lastIndexOf(sl); x++){
+                        for (int y = jd_list.indexOf(jd); y < jd_list.lastIndexOf(jd); y++){
+                            for (int z = loc_list.indexOf(el); z < loc_list.lastIndexOf(el); z++){
+                                jumpSet.add(new Node(x,y,z));
+                            }
+                        }
                     }
                 }
             }
         }
-        //vertices = jumpSet.size();
-        System.out.println("Vertices: " + vertices);
-	System.out.println("Set size: " + jumpSet.size());
+        System.out.println("Set size: " + jumpSet.size());
         return jumpSet;
+/*
+        HashSet<Node> jumpSet = new HashSet<Node>();
+        Iterator<Integer> locIter = locations.keySet().iterator();
+        Iterator<Integer> jdIter;
+        int startLoc, jd, finalLoc;
+        int slCounter = 0;
+        int jCounter = 0;
+        int flCounter = 0;
+
+        while (locIter.hasNext()) {
+            startLoc = locIter.next();
+            slCounter++;
+            jdIter = jumps.keySet().iterator();
+            while (jdIter.hasNext()) {
+                jd = jdIter.next();
+                jCounter++;
+                if (jd != 0){
+                    finalLoc = startLoc + jd;
+                    if (locations.containsKey(finalLoc)) {
+
+                        for (int i = slCounter; i < slCounter + locations.get(startLoc); i++){
+                            for (int j = jCounter; j < jCounter + locations.get(jd); j++){
+                                for (int k = flCounter; k < flCounter + locations.get(finalLoc); k++){
+                                    jumpSet.add(new Node (i, j, k));
+                                }
+                            }
+                        }
+		                //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+                        //vertices = vertices+copies;
+
+                        //for (int copy = copies; copy > 0; copy--){
+                        //jumpSet.add(new Node(startLoc, jd, finalLoc));
+                        //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
+                        //}
+                    }
+                }
+                jCounter = jCounter + locations.get(jd);
+            }
+            slCounter = slCounter + locations.get(startLoc);
+        }
+    //vertices = jumpSet.size();
+    System.out.println("Vertices: " + vertices);
+	System.out.println("Set size: " + jumpSet.size());
+	return jumpSet;
+	*/
     }
 
     private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule type, boolean countOnly){
         HashSet<Edge> edgeSet = new HashSet<Edge>();
-	int count = 0;
+	    int count = 0;
             for (Node n1 :jumpSet){
                 for (Node n2: jumpSet){
                     if (type == EdgeRule.COMPATIBLE){
                         if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
-			    if (!countOnly)  {
-				edgeSet.add(new Edge(n1, n2));
-			    }
-			    count++;
+                            if (!countOnly)  {
+                                edgeSet.add(new Edge(n1, n2));
+                            }
+                            count++;
                         }
                     } else {
                         if ((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) {
-			    if (!countOnly) {
-				edgeSet.add(new Edge(n1, n2));
-			    }
-			count++;
-			}
+                            if (!countOnly) {
+                                edgeSet.add(new Edge(n1, n2));
+                            }
+                            count++;
+                        }
                     }
-	    if (count % 1000000 == 0) {
-		System.out.print(".");
-		//	System.out.println(count  + " so far");
-	    }
+                    if (count % 1000000 == 0) {
+                        System.out.print(".");
+                    }
                 }
             }
 
@@ -201,15 +228,14 @@ public class GraphGenerator {
 }
 
 class Node implements Comparable<Node>{
-    public int startLoc, jumpDistance, endLocation, id;
+    public int startLoc, jumpDistance, endLocation;
 
     public Node(){}
 
-    public Node(int start, int jump, int end, int id){
+    public Node(int start, int jump, int end){
         this.startLoc = start;
         this.jumpDistance = jump;
         this.endLocation = end;
-        this.id = id;
     }
 
     @Override
@@ -252,18 +278,18 @@ class Triple implements Comparable<Triple> {
     }
 }
 class Pair implements Comparable<Pair>{
-    public int key, count;
+    public int count, index;
 
     public Pair(){}
 
-    public Pair(int key, int count){
-        this.key = key;
+    public Pair(int count, int index){
         this.count = count;
+        this.index = index;
     }
 
     @Override
     public int compareTo(Pair o) {
-        return this.key - o.key;
+        return this.index - o.index;
     }
 }
 
