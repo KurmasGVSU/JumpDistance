@@ -7,6 +7,8 @@ import java.util.*;
 public class GraphGenerator {
     private HashMap<Integer, Integer> jd_map;
     private HashMap<Integer, Integer> loc_map;
+    private HashMap<Integer, Pair> indexed_loc_map;
+    private HashMap<Integer, Pair> indexed_jd_map;
     private HashSet<Integer> jd_set;
     private HashSet<Integer> loc_set;
     private ArrayList<Integer> jd_list;
@@ -51,6 +53,8 @@ public class GraphGenerator {
     private void readTrace(String fileName){
         jd_map = new HashMap<Integer, Integer>();
         loc_map = new HashMap<Integer, Integer>();
+        indexed_loc_map = new HashMap<Integer, Pair>();
+        indexed_jd_map = new HashMap<Integer, Pair>();
         jd_set = new HashSet<Integer>();
         loc_set = new HashSet<Integer>();
         jd_list = new ArrayList<Integer>();
@@ -58,10 +62,10 @@ public class GraphGenerator {
         String oneLine;
         int startLoc, nextLoc, jump, linesRead = 0;
         try{
-	    String fullFilePath = fileName;
-	    if (!fileName.startsWith("/")) {
-		fullFilePath = WORKING_DIR +File.separator+fileName;
-	    }
+            String fullFilePath = fileName;
+            if (!fileName.startsWith("/")) {
+                fullFilePath = WORKING_DIR +File.separator+fileName;
+            }
             File inputFile = new File(fullFilePath);
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));
             System.out.println("'"+inputFile.getName()+"' found and successfully opened!");
@@ -90,6 +94,26 @@ public class GraphGenerator {
                 startLoc = nextLoc;
                 oneLine = reader.readLine(); linesRead++;
             }
+
+            /** Create indexed maps **/
+            int item;
+            Collections.sort(loc_list);
+            for (int index = 0; index < loc_list.size(); index++){
+                item = loc_list.get(index);
+                if (indexed_loc_map.containsKey(item)){
+                    indexed_loc_map.put(item, new Pair(indexed_loc_map.get(item).count + 1, indexed_loc_map.get(item).index));
+                } else
+                    indexed_loc_map.put(item, new Pair(1, index));
+            }
+            Collections.sort(jd_list);
+            for (int index = 0; index < jd_list.size(); index++){
+                item = jd_list.get(index);
+                if (indexed_jd_map.containsKey(item)){
+                    indexed_jd_map.put(item, new Pair(indexed_jd_map.get(item).count + 1, indexed_jd_map.get(item).index));
+                } else
+                    indexed_jd_map.put(item, new Pair(1, index));
+            }
+
         } catch (Exception e){
             System.out.println(e);
             System.out.println("Error Reading File");
@@ -140,52 +164,34 @@ public class GraphGenerator {
             }
         }
         System.out.println("Set size: " + jumpSet.size());
-        return jumpSet;
-/*
-        HashSet<Node> jumpSet = new HashSet<Node>();
-        Iterator<Integer> locIter = locations.keySet().iterator();
+        //return jumpSet;
+
+        /*HashSet<Node>*/ jumpSet = new HashSet<Node>();
+        Iterator<Integer> locIter = indexed_loc_map.keySet().iterator();
         Iterator<Integer> jdIter;
-        int startLoc, jd, finalLoc;
-        int slCounter = 0;
-        int jCounter = 0;
-        int flCounter = 0;
-
-        while (locIter.hasNext()) {
-            startLoc = locIter.next();
-            slCounter++;
-            jdIter = jumps.keySet().iterator();
-            while (jdIter.hasNext()) {
+        int sl, jd/*, el*/;     //sl = starting point, jd = jump distance, el = ending point
+        while (locIter.hasNext()){
+            sl = locIter.next();
+            jdIter = indexed_jd_map.keySet().iterator();
+            while (jdIter.hasNext()){
                 jd = jdIter.next();
-                jCounter++;
-                if (jd != 0){
-                    finalLoc = startLoc + jd;
-                    if (locations.containsKey(finalLoc)) {
-
-                        for (int i = slCounter; i < slCounter + locations.get(startLoc); i++){
-                            for (int j = jCounter; j < jCounter + locations.get(jd); j++){
-                                for (int k = flCounter; k < flCounter + locations.get(finalLoc); k++){
-                                    jumpSet.add(new Node (i, j, k));
-                                }
+                el = sl + jd;
+                if (indexed_loc_map.containsKey(el)){
+                    for (int i = 0; i < indexed_loc_map.get(sl).count; i++){
+                        for (int j = 0; j < indexed_jd_map.get(jd).count; j++){
+                            for (int k = 0; k < indexed_loc_map.get(el).count; k++){
+                                jumpSet.add(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
                             }
-                        }
-		                //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
-                        //vertices = vertices+copies;
 
-                        //for (int copy = copies; copy > 0; copy--){
-                        //jumpSet.add(new Node(startLoc, jd, finalLoc));
-                        //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
-                        //}
+                        }
+
                     }
                 }
-                jCounter = jCounter + locations.get(jd);
             }
-            slCounter = slCounter + locations.get(startLoc);
         }
-    //vertices = jumpSet.size();
-    System.out.println("Vertices: " + vertices);
-	System.out.println("Set size: " + jumpSet.size());
-	return jumpSet;
-	*/
+        System.out.println("Set size: " + jumpSet.size());
+        return jumpSet;
+
     }
 
     private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule type, boolean countOnly){
@@ -323,4 +329,56 @@ class Pair implements Comparable<Pair>{
  System.exit(1);
  }
  return histogram;
- }**/
+ }
+
+
+ HashSet<Node> jumpSet = new HashSet<Node>();
+ Iterator<Integer> locIter = locations.keySet().iterator();
+ Iterator<Integer> jdIter;
+ int startLoc, jd, finalLoc;
+ int slCounter = 0;
+ int jCounter = 0;
+ int flCounter = 0;
+
+ while (locIter.hasNext()) {
+ startLoc = locIter.next();
+ slCounter++;
+ jdIter = jumps.keySet().iterator();
+ while (jdIter.hasNext()) {
+ jd = jdIter.next();
+ jCounter++;
+ if (jd != 0){
+ finalLoc = startLoc + jd;
+ if (locations.containsKey(finalLoc)) {
+
+ for (int i = slCounter; i < slCounter + locations.get(startLoc); i++){
+ for (int j = jCounter; j < jCounter + locations.get(jd); j++){
+ for (int k = flCounter; k < flCounter + locations.get(finalLoc); k++){
+ jumpSet.add(new Node (i, j, k));
+ }
+ }
+ }
+ //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+ //vertices = vertices+copies;
+
+ //for (int copy = copies; copy > 0; copy--){
+ //jumpSet.add(new Node(startLoc, jd, finalLoc));
+ //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
+ //}
+ }
+ }
+ jCounter = jCounter + locations.get(jd);
+ }
+ slCounter = slCounter + locations.get(startLoc);
+ }
+ //vertices = jumpSet.size();
+ System.out.println("Vertices: " + vertices);
+ System.out.println("Set size: " + jumpSet.size());
+ return jumpSet;
+
+
+
+
+
+
+ **/
