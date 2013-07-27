@@ -15,6 +15,7 @@ public class GraphGenerator {
     private ArrayList<Integer> loc_list;
 
     private enum EdgeRule { COMPATIBLE, INCOMPATIBLE }
+    private enum DiagnosticRule { COUNT_ONLY, PRINT_ALL, NO_PRINT }
 
     private int vertices;
     private int edges;
@@ -22,7 +23,7 @@ public class GraphGenerator {
     private static GraphGenerator gen;
 
     private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
-    private static final int LINES_TO_READ = 200;
+    private static final int LINES_TO_READ = 20;
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -40,11 +41,9 @@ public class GraphGenerator {
             //createJumpSet(jd_map, loc_map);
             //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
         }
-        HashSet<Node> jS1 = createJumpSet(jd_map, loc_map);
-        HashSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, true);
-        HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, true);
-        System.out.println(eS1.size());
-        System.out.println(eS2.size());
+        HashSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
+        HashSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
+        HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.COUNT_ONLY);
         //this.loc_Map = createMap(loc_Hist);
         //writeFile(correlatedGraph(loc_Hist, jd_hist), "output.data");
         //System.out.println("DONE!!!!!");
@@ -59,6 +58,7 @@ public class GraphGenerator {
         loc_set = new HashSet<Integer>();
         jd_list = new ArrayList<Integer>();
         loc_list = new ArrayList<Integer>();
+
         String oneLine;
         int startLoc, nextLoc, jump, linesRead = 0;
         try{
@@ -73,7 +73,7 @@ public class GraphGenerator {
             oneLine = oneLine.trim().replaceAll("\\s+", " ");
             startLoc = Integer.parseInt(oneLine.split(" ")[1]);
             oneLine = reader.readLine(); linesRead++;
-            while (oneLine != null && linesRead != LINES_TO_READ){
+            do {
                 oneLine = oneLine.trim().replaceAll("\\s+", " ");
                 nextLoc = Integer.parseInt(oneLine.split(" ")[1]);
                 jump = startLoc - nextLoc;
@@ -93,7 +93,17 @@ public class GraphGenerator {
                 loc_set.add(startLoc);
                 startLoc = nextLoc;
                 oneLine = reader.readLine(); linesRead++;
-            }
+            } while (oneLine != null && linesRead != LINES_TO_READ);
+
+            /** Account for end of file and track final location **/
+            loc_list.add(nextLoc);
+            loc_set.add(nextLoc);
+
+            if (loc_map.containsKey(nextLoc)){
+                loc_map.put(nextLoc, loc_map.get(nextLoc)+1);
+            } else
+                loc_map.put(nextLoc, 1);
+
 
             /** Create indexed maps **/
             int item;
@@ -105,6 +115,7 @@ public class GraphGenerator {
                 } else
                     indexed_loc_map.put(item, new Pair(1, index));
             }
+
             Collections.sort(jd_list);
             for (int index = 0; index < jd_list.size(); index++){
                 item = jd_list.get(index);
@@ -144,32 +155,12 @@ public class GraphGenerator {
         return true;
     }
 
-    private HashSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations) {
+    private HashSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations, DiagnosticRule dRule) {
         HashSet<Node> jumpSet = new HashSet<Node>();
-        Collections.sort(loc_list);
-        Collections.sort(jd_list);
-        int el;
-        for (int sl : loc_list){
-            for (int jd : jd_list){
-                el = sl+jd;
-                if (loc_list.contains(el)){
-                    for (int x = loc_list.indexOf(sl); x < loc_list.lastIndexOf(sl); x++){
-                        for (int y = jd_list.indexOf(jd); y < jd_list.lastIndexOf(jd); y++){
-                            for (int z = loc_list.indexOf(el); z < loc_list.lastIndexOf(el); z++){
-                                jumpSet.add(new Node(x,y,z));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        System.out.println("Set size: " + jumpSet.size());
-        //return jumpSet;
-
-        /*HashSet<Node>*/ jumpSet = new HashSet<Node>();
         Iterator<Integer> locIter = indexed_loc_map.keySet().iterator();
         Iterator<Integer> jdIter;
-        int sl, jd/*, el*/;     //sl = starting point, jd = jump distance, el = ending point
+
+        int sl, jd, el;     //sl = starting point, jd = jump distance, el = ending point
         while (locIter.hasNext()){
             sl = locIter.next();
             jdIter = indexed_jd_map.keySet().iterator();
@@ -182,45 +173,62 @@ public class GraphGenerator {
                             for (int k = 0; k < indexed_loc_map.get(el).count; k++){
                                 jumpSet.add(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
                             }
-
                         }
-
                     }
                 }
             }
         }
-        System.out.println("Set size: " + jumpSet.size());
+
+        if (dRule == DiagnosticRule.COUNT_ONLY){
+            System.out.println("Set size: " + jumpSet.size());
+        } else if (dRule == DiagnosticRule.PRINT_ALL){
+            System.out.println("Set size: " + jumpSet.size());
+            for (Node n: jumpSet){
+                System.out.println(n.toString());
+            }
+            System.out.println();
+        }
         return jumpSet;
 
     }
 
-    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule type, boolean countOnly){
+    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule eRule, DiagnosticRule dRule){
         HashSet<Edge> edgeSet = new HashSet<Edge>();
 	    int count = 0;
             for (Node n1 :jumpSet){
                 for (Node n2: jumpSet){
-                    if (type == EdgeRule.COMPATIBLE){
+                    if (eRule == EdgeRule.COMPATIBLE){
                         if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
-                            if (!countOnly)  {
-                                edgeSet.add(new Edge(n1, n2));
+                            if (!edgeSet.contains(new Edge(n1, n2))){
+                                count++;
+                                if (dRule != DiagnosticRule.COUNT_ONLY)
+                                    edgeSet.add(new Edge(n1, n2));
                             }
-                            count++;
                         }
                     } else {
-                        if ((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) {
-                            if (!countOnly) {
-                                edgeSet.add(new Edge(n1, n2));
+                        if (((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) && ( ! n1.equals(n2))) {
+                            if (!edgeSet.contains(new Edge(n1, n2))){
+                                count++;
+                                if (dRule != DiagnosticRule.COUNT_ONLY)
+                                    edgeSet.add(new Edge(n1, n2));
                             }
-                            count++;
                         }
                     }
                     if (count % 1000000 == 0) {
-                        System.out.print(".");
+                        //System.out.print(".");
                     }
                 }
             }
 
-	    System.out.println("\nNumber of edges: " + count);
+        if (dRule == DiagnosticRule.COUNT_ONLY){
+            System.out.println("\nNumber of edges =" + count + " using "+eRule.toString() + " rule.");
+        } else if (dRule == DiagnosticRule.PRINT_ALL) {
+            System.out.println("\nNumber of edges =" + count + " using "+eRule.toString() + " rule.");
+            for (Edge e: edgeSet){
+                System.out.println(e.n1.toString()+":"+e.n2.toString());
+            }
+        }
+
         return edgeSet;
     }
 
@@ -244,27 +252,61 @@ class Node implements Comparable<Node>{
         this.endLocation = end;
     }
 
+    public boolean equals(Node o){
+        if (this.startLoc == o.startLoc && this.jumpDistance == o.jumpDistance && this.endLocation == o.endLocation)
+            return true;
+
+        return false;
+    }
+
     @Override
     public int compareTo(Node o) {
-        return startLoc - o.startLoc;
+        if (this.equals(o)){
+            return 0;
+        } else if (this.startLoc != o.startLoc) {
+            return this.startLoc - o.startLoc;
+
+        } else {
+            return this.jumpDistance - o.jumpDistance;
+        }
+    }
+
+    @Override
+    public String toString(){
+        return "("+startLoc+","+jumpDistance+","+endLocation+")";
     }
 }
 
-class Edge{
+class Edge {
     public Node n1, n2;
 
     public Edge(){}
 
     public Edge(Node n1, Node n2){
-        this.n1 = n1;
-        this.n2 = n2;
+        if (n1.compareTo(n2) > 0){
+            this.n2 = n1;
+            this.n1 = n2;
+        } else {
+            this.n1 = n1;
+            this.n2 = n2;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return this.toString().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object arg0) {
+        return true;
     }
 
     @Override
     public String toString(){
-        String val = n1.startLoc+","+n2.startLoc;
-        return val;
+        return n1.toString()+":"+n2.toString();
     }
+
 }
 
 class Triple implements Comparable<Triple> {
@@ -376,9 +418,10 @@ class Pair implements Comparable<Pair>{
  System.out.println("Set size: " + jumpSet.size());
  return jumpSet;
 
-
-
-
+ long startTime = System.currentTimeMillis();
+ long stopTime = System.currentTimeMillis();
+ long runTime = stopTime - startTime;
+ System.out.println("Run time: " + runTime);
 
 
  **/
