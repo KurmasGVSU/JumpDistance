@@ -23,7 +23,7 @@ public class GraphGenerator {
     private static GraphGenerator gen;
 
     private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
-    private static final int LINES_TO_READ = 20;
+    private static final int LINES_TO_READ = 10;
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -41,12 +41,10 @@ public class GraphGenerator {
             //createJumpSet(jd_map, loc_map);
             //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
         }
-        HashSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
-        HashSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
-        HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.COUNT_ONLY);
-        //this.loc_Map = createMap(loc_Hist);
-        //writeFile(correlatedGraph(loc_Hist, jd_hist), "output.data");
-        //System.out.println("DONE!!!!!");
+        TreeSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
+        TreeSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
+        //HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.PRINT_ALL);
+        writeFile(eS1, jS1, "eS1.mis");
     }
 
     private void readTrace(String fileName){
@@ -134,17 +132,23 @@ public class GraphGenerator {
         System.out.println("Jump Distance and Location Histograms Created Successfully.");
     }
 
-    private boolean writeFile(List<Triple> outputList, String fileName){
+    private boolean writeFile(TreeSet<Edge> edgeSet, TreeSet<Node> nodeSet, String fileName){
+        Edge edge;
         try{
             File outputFile = new File(fileName);
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
-            Iterator<Triple> iter = outputList.iterator();
-            Triple tri;
+
+            writer.write("p edge " + loc_set.size() + " " + edgeSet.size());
+            //System.out.print("p edge " + loc_set.size() + " " + edgeSet.size());
+
+            Iterator<Edge> iter = edgeSet.iterator();
             while (iter.hasNext()){
-                tri = iter.next();
-                writer.write(tri.start+" "+tri.mid+" "+ tri.end);
-                writer.newLine();
+                edge = iter.next();
+                writer.write("\ne " + (nodeSet.headSet(edge.n1).size()+1) + " " + (nodeSet.headSet(edge.n2).size()+1));
+                //System.out.print("\ne " + (nodeSet.headSet(edge.n1).size()+1) + " " + (nodeSet.headSet(edge.n2).size()+1));
             }
+            writer.newLine();
+            writer.close();
         } catch (Exception e){
             System.out.println(e);
             System.out.println("Error Writing File");
@@ -155,8 +159,8 @@ public class GraphGenerator {
         return true;
     }
 
-    private HashSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations, DiagnosticRule dRule) {
-        HashSet<Node> jumpSet = new HashSet<Node>();
+    private TreeSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations, DiagnosticRule dRule) {
+        TreeSet<Node> jumpSet = new TreeSet<Node>();
         Iterator<Integer> locIter = indexed_loc_map.keySet().iterator();
         Iterator<Integer> jdIter;
 
@@ -192,53 +196,43 @@ public class GraphGenerator {
 
     }
 
-    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule eRule, DiagnosticRule dRule){
-        HashSet<Edge> edgeSet = new HashSet<Edge>();
-	    int count = 0;
+    private TreeSet<Edge> createEdgeSet(TreeSet<Node> jumpSet, EdgeRule eRule, DiagnosticRule dRule){
+        HashSet<Edge> edgeHashSet = new HashSet<Edge>();
+        TreeSet<Edge> edgeTreeSet = new TreeSet<Edge>();
+
             for (Node n1 :jumpSet){
                 for (Node n2: jumpSet){
                     if (eRule == EdgeRule.COMPATIBLE){
+                        /** v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end) **/
                         if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
-                            if (!edgeSet.contains(new Edge(n1, n2))){
-                                count++;
-                                if (dRule != DiagnosticRule.COUNT_ONLY)
-                                    edgeSet.add(new Edge(n1, n2));
-                            }
+                            //if (!edgeSet.contains(new Edge(n1, n2))){
+                            edgeHashSet.add(new Edge(n1, n2));
+                            edgeTreeSet.add(new Edge(n1, n2));
+                            //}
                         }
                     } else {
+                        /** v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end) **/
                         if (((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) && ( ! n1.equals(n2))) {
-                            if (!edgeSet.contains(new Edge(n1, n2))){
-                                count++;
-                                if (dRule != DiagnosticRule.COUNT_ONLY)
-                                    edgeSet.add(new Edge(n1, n2));
-                            }
+                            //if (!edgeSet.contains(new Edge(n1, n2))){
+                            edgeHashSet.add(new Edge(n1, n2));
+                            edgeTreeSet.add(new Edge(n1, n2));
+                            //}
                         }
-                    }
-                    if (count % 1000000 == 0) {
-                        //System.out.print(".");
                     }
                 }
             }
 
         if (dRule == DiagnosticRule.COUNT_ONLY){
-            System.out.println("\nNumber of edges =" + count + " using "+eRule.toString() + " rule.");
+            System.out.println("Number of edges =" + edgeTreeSet.size() + " using "+eRule.toString() + " rule.");
         } else if (dRule == DiagnosticRule.PRINT_ALL) {
-            System.out.println("\nNumber of edges =" + count + " using "+eRule.toString() + " rule.");
-            for (Edge e: edgeSet){
+            System.out.println("Number of edges =" + edgeTreeSet.size() + " using "+eRule.toString() + " rule.");
+            for (Edge e: edgeTreeSet){
                 System.out.println(e.n1.toString()+":"+e.n2.toString());
             }
         }
 
-        return edgeSet;
+        return edgeTreeSet;
     }
-
-    /**
-     1)
-     v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end)
-
-     2)
-     v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end)
-     */
 }
 
 class Node implements Comparable<Node>{
@@ -261,23 +255,23 @@ class Node implements Comparable<Node>{
 
     @Override
     public int compareTo(Node o) {
-        if (this.equals(o)){
-            return 0;
-        } else if (this.startLoc != o.startLoc) {
+        if (this.startLoc != o.startLoc) {
             return this.startLoc - o.startLoc;
-
-        } else {
+        } else if (this.jumpDistance != o.jumpDistance) {
             return this.jumpDistance - o.jumpDistance;
+        } else {
+            return this.endLocation - o.endLocation;
         }
     }
 
     @Override
     public String toString(){
-        return "("+startLoc+","+jumpDistance+","+endLocation+")";
+        return startLoc+","+jumpDistance+","+endLocation;
+        //return "("+startLoc+","+jumpDistance+","+endLocation+")";
     }
 }
 
-class Edge {
+class Edge implements Comparable<Edge>{
     public Node n1, n2;
 
     public Edge(){}
@@ -299,7 +293,7 @@ class Edge {
 
     @Override
     public boolean equals(Object arg0) {
-        return true;
+        return true; /** assumes no hashcode collisions, not safe on larger data sets **/
     }
 
     @Override
@@ -307,6 +301,13 @@ class Edge {
         return n1.toString()+":"+n2.toString();
     }
 
+    @Override
+    public int compareTo(Edge o) {
+        if (this.n1.compareTo(o.n1) != 0){
+            return this.n1.compareTo(o.n1);
+        }
+        return this.n2.compareTo(o.n2);  //To change body of implemented methods use File | Settings | File Templates.
+    }
 }
 
 class Triple implements Comparable<Triple> {
