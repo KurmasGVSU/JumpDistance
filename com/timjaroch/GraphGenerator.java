@@ -135,8 +135,8 @@ public class GraphGenerator {
                 finalLoc = startLoc + jd;
                 if (locations.containsKey(finalLoc)) {
                     
-		    copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
-		    /*
+		    //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+		    
                     copies = locations.get(startLoc);
                     if (jumps.get(jd) < copies) {
                         copies = jumps.get(jd);
@@ -144,7 +144,7 @@ public class GraphGenerator {
                     if (locations.get(finalLoc) < copies) {
                         copies = locations.get(finalLoc);
 		    }
-		    */
+		    
                     vertices = vertices+copies;
 
                     for (int copy = copies; copy > 0; copy--){
