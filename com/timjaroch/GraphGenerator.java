@@ -3,6 +3,9 @@ package com.timjaroch;
 import java.io.*;
 import java.lang.System;
 import java.util.*;
+import org.jgrapht.*;
+import org.jgrapht.alg.BronKerboschCliqueFinder;
+import org.jgrapht.graph.*;
 
 public class GraphGenerator {
     private HashMap<Integer, Integer> jd_map;
@@ -14,6 +17,8 @@ public class GraphGenerator {
     private ArrayList<Integer> jd_list;
     private ArrayList<Integer> loc_list;
 
+    private UndirectedGraph<Node, DefaultEdge> graph = new SimpleGraph<Node, DefaultEdge>(DefaultEdge.class);
+
     private enum EdgeRule { COMPATIBLE, INCOMPATIBLE }
     private enum DiagnosticRule { COUNT_ONLY, PRINT_ALL, NO_PRINT }
 
@@ -23,7 +28,7 @@ public class GraphGenerator {
     private static GraphGenerator gen;
 
     private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
-    private static final int LINES_TO_READ = 10;
+    private static final int LINES_TO_READ = 11;
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -41,10 +46,17 @@ public class GraphGenerator {
             //createJumpSet(jd_map, loc_map);
             //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
         }
-        TreeSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
-        TreeSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
+        //createJumpSet(jd_map, loc_map, DiagnosticRule.NO_PRINT);
+        addVertices(EdgeRule.INCOMPATIBLE);
+        //addEdges(EdgeRule.COMPATIBLE);
+        addEdges(EdgeRule.INCOMPATIBLE);
+        BronKerboschCliqueFinder finder = new BronKerboschCliqueFinder(graph);
+        Collection<Set<Integer>> result = finder.getBiggestMaximalCliques();
+        System.out.println(result.toString());
+        //TreeSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
+        //TreeSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
         //HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.PRINT_ALL);
-        writeFile(eS1, jS1, "eS1.mis");
+        //writeFile(eS1, jS1, "eS1.mis");
     }
 
     private void readTrace(String fileName){
@@ -176,6 +188,7 @@ public class GraphGenerator {
                         for (int j = 0; j < indexed_jd_map.get(jd).count; j++){
                             for (int k = 0; k < indexed_loc_map.get(el).count; k++){
                                 jumpSet.add(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
+                                graph.addVertex(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
                             }
                         }
                     }
@@ -193,6 +206,56 @@ public class GraphGenerator {
             System.out.println();
         }
         return jumpSet;
+
+    }
+
+    private void addVertices(EdgeRule eRule){
+        //System.out.println("Size of locList:"+loc_list.size());
+        //System.out.println("Size of jdList:"+jd_list.size());
+        //Iterator<Integer> locIter = indexed_loc_map.keySet().iterator();
+        Iterator<Integer> locIter = loc_map.keySet().iterator();
+        Iterator<Integer> jdIter;
+
+        int sl, jd, el;     //sl = starting point, jd = jump distance, el = ending point
+        while (locIter.hasNext()){
+            sl = locIter.next();
+            jdIter = jd_map.keySet().iterator();
+            while (jdIter.hasNext()){
+                jd = jdIter.next();
+                el = sl + jd;
+                if (loc_map.containsKey(el)){
+                    for (int i = 0; i < loc_map.get(sl); i++){
+                        for (int j = 0; j < jd_map.get(jd); j++){
+                            for (int k = 0; k < loc_map.get(el); k++){
+                                graph.addVertex(new Node(sl, jd, el));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void addEdges(EdgeRule eRule){
+        for (Node n1: graph.vertexSet()){
+            for (Node n2: graph.vertexSet()){
+                if (eRule == EdgeRule.COMPATIBLE){
+                    /** v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end) **/
+                    if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
+                        graph.addEdge(n1, n2);
+                    }
+                } else {
+                    /** v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end) **/
+                    if (((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) && ( ! n1.equals(n2))) {
+                        graph.addEdge(n1, n2);
+                    }
+                }
+            }
+        }
+        //System.out.println(eRule.toString());
+        System.out.println(graph.toString());
+        //System.out.println("Vertices: "+graph.vertexSet().size());
+        //System.out.println("edges:" +graph.edgeSet().size());
 
     }
 
@@ -266,7 +329,7 @@ class Node implements Comparable<Node>{
 
     @Override
     public String toString(){
-        return startLoc+","+jumpDistance+","+endLocation;
+        return startLoc+"."+jumpDistance+"."+endLocation;
         //return "("+startLoc+","+jumpDistance+","+endLocation+")";
     }
 }
