@@ -17,7 +17,7 @@ public class GraphGenerator {
     private ArrayList<Integer> jd_list;
     private ArrayList<Integer> loc_list;
 
-    private UndirectedGraph<Node, DefaultEdge> graph = new SimpleGraph<Node, DefaultEdge>(DefaultEdge.class);
+    private UndirectedGraph<Node, DefaultEdge> graph;
 
     private enum EdgeRule { COMPATIBLE, INCOMPATIBLE }
     private enum DiagnosticRule { COUNT_ONLY, PRINT_ALL, NO_PRINT }
@@ -38,26 +38,135 @@ public class GraphGenerator {
     public GraphGenerator(){}
 
     public void run(String[] args){
-        if (args.length == 0){
-            System.out.println("No arguments specified exiting..");
+        if (args.length < 3){
+            System.out.println("Not enough arguments specified\nExiting..");
         } else {
             System.out.println("Arguments found, attempting to open \'"+ WORKING_DIR +args[0]+"\'");
-            gen.readTrace(args[0]);     //gen.readTrace("OpenMail_LU056000_trace");
-            //createJumpSet(jd_map, loc_map);
-            //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
+            int startIndex = -1, lines = -1;
+            try {
+                startIndex = Integer.parseInt(args[1]);
+                lines = Integer.parseInt(args[2]);
+            } catch (NumberFormatException e){
+                System.out.println("Arguments must be in the following format");
+                System.out.println("Filename startingIndex linesToRead");
+                System.out.println("Where startingIndex and linesToRead are integers greater than -2");
+            }
+
+            File f;
+            if ((f = new File(WORKING_DIR + args[0])).exists()){
+                System.out.println("File exists...");
+
+                long startTime, stopTime, runtime = 0, totalTime = 0;
+                for (int i =0; i < 100; i++) {
+                    startTime = System.currentTimeMillis();
+                    graph = new SimpleGraph<Node, DefaultEdge>(DefaultEdge.class);
+
+                    readTrace(f, startIndex, lines);
+                    createGraph(EdgeRule.COMPATIBLE);
+                    stopTime = System.currentTimeMillis();
+                    runtime = (stopTime - startTime);
+                    totalTime += (stopTime - startTime);
+                    System.out.println("Runtime:" + (runtime) + " Totaltime:"+totalTime);
+                }
+                totalTime = totalTime / 100;
+                System.out.println("Avg: " + totalTime);
+            } else if ((f = new File(args[0])).exists()) {
+                System.out.println("File exists...");
+                readTrace(f, startIndex, lines);
+            } else {
+                System.out.println("That File does not seem to exist\nExiting...");
+            }
+
         }
-        //createJumpSet(jd_map, loc_map, DiagnosticRule.NO_PRINT);
-        addVertices(EdgeRule.INCOMPATIBLE);
-        //addEdges(EdgeRule.COMPATIBLE);
-        addEdges(EdgeRule.INCOMPATIBLE);
-        BronKerboschCliqueFinder finder = new BronKerboschCliqueFinder(graph);
-        Collection<Set<Integer>> result = finder.getBiggestMaximalCliques();
-        System.out.println(result.toString());
-        //TreeSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
-        //TreeSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
-        //HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.PRINT_ALL);
-        //writeFile(eS1, jS1, "eS1.mis");
     }
+
+    private boolean readTrace(File f, int start, int lines){
+        jd_map = new HashMap<Integer, Integer>();
+        loc_map = new HashMap<Integer, Integer>();
+        String line = "";
+        int index = 0;
+        int startLoc, nextLoc;
+        try{
+            BufferedReader reader = new BufferedReader(new FileReader(f));
+            while (index < start && start != -1 && (line = reader.readLine()) != null){
+                index++;
+            }
+            if (line == "")
+                line = reader.readLine();
+
+            startLoc = parseLine(line);
+
+            while (lines != 1){
+                if ((line = reader.readLine()) == null)
+                    break;
+
+                nextLoc = parseLine(line);
+                addJump(startLoc - nextLoc);
+                addLocation(startLoc);
+                startLoc = nextLoc;
+                lines--;
+            }
+            addLocation(startLoc); //add last location visited
+
+        } catch (Exception e){
+            System.out.println("Error reading trace");
+            System.out.println(e);
+            System.exit(0);
+        }
+        //System.out.println("Jump Distance and Location Histograms Created Successfully.");
+        return lines < 0;
+    }
+
+    private int parseLine(String line){
+        line = line.trim().replaceAll("\\s+", " ");
+        return Integer.parseInt(line.split(" ")[1]);
+    }
+
+    private void addJump(int jump){
+        if (jd_map.containsKey(jump)){
+            jd_map.put(jump, jd_map.get(jump)+1);
+        } else
+            jd_map.put(jump, 1);
+    }
+
+    private void addLocation(int location){
+        if (loc_map.containsKey(location)){
+            loc_map.put(location, loc_map.get(location)+1);
+        } else
+            loc_map.put(location, 1);
+    }
+
+    private void createGraph(EdgeRule eRule){
+        ArrayList<Node> nodes = new ArrayList<Node>();
+        for (Integer sL: loc_map.keySet()){
+            for (Integer eL: loc_map.keySet()){
+                if (jd_map.containsKey(sL - eL)){
+                    for (int i = 0; i < loc_map.get(sL)*loc_map.get(eL)*jd_map.get(sL - eL); i++){
+                        graph.addVertex(new Node(sL, sL - eL, eL, i));
+                        nodes.add(new Node(sL, sL - eL, eL, i));
+                    }
+                }
+            }
+        }
+        for (Node n1: graph.vertexSet()){
+            for (Node n2: graph.vertexSet()){
+                if (eRule == EdgeRule.COMPATIBLE){
+                    /** v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end) **/
+                    if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
+                        graph.addEdge(n1, n2);
+                    }
+                } else {
+                    /** v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end) **/
+                    if (((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) && ( ! n1.equals(n2))) {
+                        graph.addEdge(n1, n2);
+                    }
+                }
+            }
+        }
+
+        //System.out.println(graph.toString());
+    }
+
 
     private void readTrace(String fileName){
         jd_map = new HashMap<Integer, Integer>();
@@ -187,8 +296,8 @@ public class GraphGenerator {
                     for (int i = 0; i < indexed_loc_map.get(sl).count; i++){
                         for (int j = 0; j < indexed_jd_map.get(jd).count; j++){
                             for (int k = 0; k < indexed_loc_map.get(el).count; k++){
-                                jumpSet.add(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
-                                graph.addVertex(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
+                                //jumpSet.add(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
+                                //graph.addVertex(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
                             }
                         }
                     }
@@ -227,7 +336,7 @@ public class GraphGenerator {
                     for (int i = 0; i < loc_map.get(sl); i++){
                         for (int j = 0; j < jd_map.get(jd); j++){
                             for (int k = 0; k < loc_map.get(el); k++){
-                                graph.addVertex(new Node(sl, jd, el));
+                                //graph.addVertex(new Node(sl, jd, el));
                             }
                         }
                     }
@@ -299,18 +408,19 @@ public class GraphGenerator {
 }
 
 class Node implements Comparable<Node>{
-    public int startLoc, jumpDistance, endLocation;
+    public int startLoc, jumpDistance, endLocation, id;
 
     public Node(){}
 
-    public Node(int start, int jump, int end){
+    public Node(int start, int jump, int end, int id){
         this.startLoc = start;
         this.jumpDistance = jump;
         this.endLocation = end;
+        this.id = id;
     }
 
     public boolean equals(Node o){
-        if (this.startLoc == o.startLoc && this.jumpDistance == o.jumpDistance && this.endLocation == o.endLocation)
+        if (this.startLoc == o.startLoc && this.jumpDistance == o.jumpDistance && this.endLocation == o.endLocation && this.id == o.id)
             return true;
 
         return false;
@@ -329,7 +439,7 @@ class Node implements Comparable<Node>{
 
     @Override
     public String toString(){
-        return startLoc+"."+jumpDistance+"."+endLocation;
+        return "("+startLoc+":"+endLocation+"/"+jumpDistance+" ID:"+id+")";
         //return "("+startLoc+","+jumpDistance+","+endLocation+")";
     }
 }
@@ -486,6 +596,30 @@ class Pair implements Comparable<Pair>{
  long stopTime = System.currentTimeMillis();
  long runTime = stopTime - startTime;
  System.out.println("Run time: " + runTime);
+
+
+ public void run(String[] args){
+ if (args.length == 0){
+ System.out.println("No arguments specified exiting..");
+ } else {
+ System.out.println("Arguments found, attempting to open \'"+ WORKING_DIR +args[0]+"\'");
+ gen.readTrace(args[0]);     //gen.readTrace("OpenMail_LU056000_trace");
+ //createJumpSet(jd_map, loc_map);
+ //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
+ }
+ //createJumpSet(jd_map, loc_map, DiagnosticRule.NO_PRINT);
+ addVertices(EdgeRule.INCOMPATIBLE);
+ //addEdges(EdgeRule.COMPATIBLE);
+ addEdges(EdgeRule.INCOMPATIBLE);
+ BronKerboschCliqueFinder finder = new BronKerboschCliqueFinder(graph);
+ Collection<Set<Integer>> result = finder.getBiggestMaximalCliques();
+ System.out.println(result.toString());
+ //TreeSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
+ //TreeSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
+ //HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.PRINT_ALL);
+ //writeFile(eS1, jS1, "eS1.mis");
+ }
+
 
 
  **/
