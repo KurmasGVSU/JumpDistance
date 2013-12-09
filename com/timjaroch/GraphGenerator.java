@@ -27,7 +27,6 @@ public class GraphGenerator {
 
     private static GraphGenerator gen;
 
-    private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
     private static final int LINES_TO_READ = 11;
 
     public static void main(String[] args) {
@@ -38,58 +37,127 @@ public class GraphGenerator {
     public GraphGenerator(){}
 
     public void run(String[] args){
-        if (args.length < 3){
-            System.out.println("Not enough arguments specified\nExiting..");
-        } else {
-            System.out.println("Arguments found, attempting to open \'"+ WORKING_DIR +args[0]+"\'");
+        if (args.length == 1){
+            System.out.println("Running in standard mode!");
+            System.out.println("attempting to open '"+args[0]+"\'");
+            File f;
+            if ((f = new File(args[0])).exists()) {
+                readTrace(f, -1, -1);
+            }
+        } else if (args.length == 2){
+            System.out.println("Running in \'Time Test\' mode!");
+            System.out.println("attempting to open '"+args[0]+"\'");
+            File f;
+            if ((f = new File(args[0])).exists()) {
+                System.out.println("File exists...");
+                timeTest(f);
+            }
+        } else if (args.length == 3) {
+            System.out.println("Running in \'Block\' mode!");
             int startIndex = -1, lines = -1;
             try {
                 startIndex = Integer.parseInt(args[1]);
                 lines = Integer.parseInt(args[2]);
+                System.out.println("Starting index set to:"+startIndex+" will attempt to read "+lines+" lines.");
             } catch (NumberFormatException e){
                 System.out.println("Arguments must be in the following format");
                 System.out.println("Filename startingIndex linesToRead");
                 System.out.println("Where startingIndex and linesToRead are integers greater than -2");
+                System.exit(1);
+            } catch (Exception ex){
+                System.out.println("Unknown Error Occurred");
+                System.out.println(ex);
+                System.exit(1);
             }
-
+            System.out.println("Attempting to open \'"+args[0]+"\'");
             File f;
-            if ((f = new File(WORKING_DIR + args[0])).exists()){
-                System.out.println("File exists...");
-
-                long startTime, stopTime, runtime = 0, totalTime = 0;
-                for (int i =0; i < 100; i++) {
-                    startTime = System.currentTimeMillis();
-                    graph = new SimpleGraph<Node, DefaultEdge>(DefaultEdge.class);
-
-                    readTrace(f, startIndex, lines);
-                    createGraph(EdgeRule.COMPATIBLE);
-                    stopTime = System.currentTimeMillis();
-                    runtime = (stopTime - startTime);
-                    totalTime += (stopTime - startTime);
-                    System.out.println("Runtime:" + (runtime) + " Totaltime:"+totalTime);
-                }
-                totalTime = totalTime / 100;
-                System.out.println("Avg: " + totalTime);
-            } else if ((f = new File(args[0])).exists()) {
+            if ((f = new File(args[0])).exists()) {
                 System.out.println("File exists...");
                 readTrace(f, startIndex, lines);
             } else {
                 System.out.println("That File does not seem to exist\nExiting...");
             }
-
+        } else {
+            System.out.println("Invalid number of arguments found\nExiting...");
+            System.exit(1);
         }
+    }
+
+    private void timeTest(File f){
+        System.out.println("Time Test Started...");
+        ArrayList<String> outputLines = new ArrayList<String>();
+        long startTime, stopTime, compTime = 0, compTotal = 0, incompTime = 0, incompTotal = 0;
+        long radix = 10000;
+        int lines = 66388;
+        BufferedWriter writer;
+        //66388
+        try{
+            System.out.println("Starting Radix:"+radix);
+            while(radix > 450){
+
+                for (int r = 0; r < radix; r++){
+                    readTrace(f, (int)(r*(lines/radix)), (int)(lines/radix));
+
+                    startTime = System.currentTimeMillis();
+                        createGraph(EdgeRule.COMPATIBLE, new SimpleGraph<Node, DefaultEdge>(DefaultEdge.class));
+                    stopTime = System.currentTimeMillis();
+                    compTime = stopTime - startTime;
+                    compTotal += compTime;
+
+                    startTime = System.currentTimeMillis();
+                        createGraph(EdgeRule.INCOMPATIBLE, new SimpleGraph<Node, DefaultEdge>(DefaultEdge.class));
+                    stopTime = System.currentTimeMillis();
+                    incompTime = stopTime - startTime;
+                    incompTotal += incompTime;
+
+                    outputLines.add(compTime+";"+incompTime);
+                }
+                File outputFile = new File("logs"+File.separator+f.getName()+"."+radix+".csv");
+                writer = new BufferedWriter(new FileWriter(outputFile));
+                writer.write(compTotal+";"+incompTotal+"\n");
+                writer.write((compTotal/radix)+";"+(incompTotal/radix));
+                for (String s: outputLines){
+                    writer.write("\n"+s);
+                }
+
+                writer.close();
+                System.out.println("radix: "+radix+" is done.");
+                if (radix > 1000) radix -= 1000;
+                else radix -= 50;
+            }
+        } catch (Exception e){
+            System.out.println("Error Writing File");
+            System.out.println(e);
+            System.out.print("Exiting...");
+            System.exit(1);
+        }
+    }
+
+    private void writeString(String line){
+        try{
+            File outputFile = new File("output.log");
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+            writer.append(line);
+            writer.close();
+        } catch (Exception e){
+            System.out.println(e);
+            System.out.println("Error Writing File");
+            System.out.print("Exiting...");
+            System.exit(1);
+        }
+
     }
 
     private boolean readTrace(File f, int start, int lines){
         jd_map = new HashMap<Integer, Integer>();
         loc_map = new HashMap<Integer, Integer>();
         String line = "";
-        int index = 0;
+        int index = 0, counter = 0;
         int startLoc, nextLoc;
         try{
             BufferedReader reader = new BufferedReader(new FileReader(f));
             while (index < start && start != -1 && (line = reader.readLine()) != null){
-                index++;
+                index++; counter++;
             }
             if (line == "")
                 line = reader.readLine();
@@ -104,12 +172,13 @@ public class GraphGenerator {
                 addJump(startLoc - nextLoc);
                 addLocation(startLoc);
                 startLoc = nextLoc;
-                lines--;
+                lines--; counter++;
             }
             addLocation(startLoc); //add last location visited
 
         } catch (Exception e){
             System.out.println("Error reading trace");
+            System.out.println("@ line: "+counter+" line says:"+line);
             System.out.println(e);
             System.exit(0);
         }
@@ -119,7 +188,14 @@ public class GraphGenerator {
 
     private int parseLine(String line){
         line = line.trim().replaceAll("\\s+", " ");
-        return Integer.parseInt(line.split(" ")[1]);
+        try{
+            return Integer.parseInt(line.split(" ")[1]);
+        } catch (Exception e){
+            System.out.println("File not in correct format!");
+            System.out.println(line);
+            System.out.println(e);
+        }
+        return -1;
     }
 
     private void addJump(int jump){
@@ -136,7 +212,7 @@ public class GraphGenerator {
             loc_map.put(location, 1);
     }
 
-    private void createGraph(EdgeRule eRule){
+    private void createGraph(EdgeRule eRule, UndirectedGraph<Node, DefaultEdge> graph){
         ArrayList<Node> nodes = new ArrayList<Node>();
         for (Integer sL: loc_map.keySet()){
             for (Integer eL: loc_map.keySet()){
@@ -183,7 +259,7 @@ public class GraphGenerator {
         try{
             String fullFilePath = fileName;
             if (!fileName.startsWith("/")) {
-                fullFilePath = WORKING_DIR +File.separator+fileName;
+                fullFilePath =  File.separator+fileName;
             }
             File inputFile = new File(fullFilePath);
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));
@@ -407,113 +483,10 @@ public class GraphGenerator {
     }
 }
 
-class Node implements Comparable<Node>{
-    public int startLoc, jumpDistance, endLocation, id;
 
-    public Node(){}
 
-    public Node(int start, int jump, int end, int id){
-        this.startLoc = start;
-        this.jumpDistance = jump;
-        this.endLocation = end;
-        this.id = id;
-    }
 
-    public boolean equals(Node o){
-        if (this.startLoc == o.startLoc && this.jumpDistance == o.jumpDistance && this.endLocation == o.endLocation && this.id == o.id)
-            return true;
 
-        return false;
-    }
-
-    @Override
-    public int compareTo(Node o) {
-        if (this.startLoc != o.startLoc) {
-            return this.startLoc - o.startLoc;
-        } else if (this.jumpDistance != o.jumpDistance) {
-            return this.jumpDistance - o.jumpDistance;
-        } else {
-            return this.endLocation - o.endLocation;
-        }
-    }
-
-    @Override
-    public String toString(){
-        return "("+startLoc+":"+endLocation+"/"+jumpDistance+" ID:"+id+")";
-        //return "("+startLoc+","+jumpDistance+","+endLocation+")";
-    }
-}
-
-class Edge implements Comparable<Edge>{
-    public Node n1, n2;
-
-    public Edge(){}
-
-    public Edge(Node n1, Node n2){
-        if (n1.compareTo(n2) > 0){
-            this.n2 = n1;
-            this.n1 = n2;
-        } else {
-            this.n1 = n1;
-            this.n2 = n2;
-        }
-    }
-
-    @Override
-    public int hashCode() {
-        return this.toString().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object arg0) {
-        return true; /** assumes no hashcode collisions, not safe on larger data sets **/
-    }
-
-    @Override
-    public String toString(){
-        return n1.toString()+":"+n2.toString();
-    }
-
-    @Override
-    public int compareTo(Edge o) {
-        if (this.n1.compareTo(o.n1) != 0){
-            return this.n1.compareTo(o.n1);
-        }
-        return this.n2.compareTo(o.n2);  //To change body of implemented methods use File | Settings | File Templates.
-    }
-}
-
-class Triple implements Comparable<Triple> {
-    public int start, mid, end;
-
-    public Triple(){}
-
-    public Triple(int start, int mid, int end){
-        this.start = start;
-        this.mid = mid;
-        this.end = end;
-    }
-
-    @Override
-    public int compareTo(Triple o) {
-        return this.start - o.start;
-    }
-}
-class Pair implements Comparable<Pair>{
-    public int count, index;
-
-    public Pair(){}
-
-    public Pair(int count, int index){
-        this.count = count;
-        this.index = index;
-    }
-
-    @Override
-    public int compareTo(Pair o) {
-        return this.index - o.index;
-    }
-}
 
 /**
  * \/ OLD CODE \/

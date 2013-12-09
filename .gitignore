@@ -5,6 +5,7 @@ out/
 .idea/
 junk/
 lib/
+logs/
 
 *.py[cod]
 
