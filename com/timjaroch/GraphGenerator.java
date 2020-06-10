@@ -7,12 +7,15 @@ import java.util.*;
 public class GraphGenerator {
     private HashMap<Integer, Integer> jd_map;
     private HashMap<Integer, Integer> loc_map;
+    private HashMap<Integer, Pair> indexed_loc_map;
+    private HashMap<Integer, Pair> indexed_jd_map;
     private HashSet<Integer> jd_set;
     private HashSet<Integer> loc_set;
     private ArrayList<Integer> jd_list;
     private ArrayList<Integer> loc_list;
 
     private enum EdgeRule { COMPATIBLE, INCOMPATIBLE }
+    private enum DiagnosticRule { COUNT_ONLY, PRINT_ALL, NO_PRINT }
 
     private int vertices;
     private int edges;
@@ -20,7 +23,7 @@ public class GraphGenerator {
     private static GraphGenerator gen;
 
     private static final String WORKING_DIR = "\\GitHub\\JumpDistance\\data\\";
-    private static final int LINES_TO_READ = 500;
+    private static final int LINES_TO_READ = 10;
 
     public static void main(String[] args) {
         gen = new GraphGenerator();
@@ -38,30 +41,29 @@ public class GraphGenerator {
             //createJumpSet(jd_map, loc_map);
             //System.out.println(createEdgeSet(createJumpSet(jd_map, loc_map), 0).size());
         }
-        HashSet<Node> jS1 = createJumpSet(jd_map, loc_map);
-        HashSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, true);
-        HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, true);
-        System.out.println(eS1.size());
-        System.out.println(eS2.size());
-        //this.loc_Map = createMap(loc_Hist);
-        //writeFile(correlatedGraph(loc_Hist, jd_hist), "output.data");
-        //System.out.println("DONE!!!!!");
+        TreeSet<Node> jS1 = createJumpSet(jd_map, loc_map, DiagnosticRule.COUNT_ONLY);
+        TreeSet<Edge> eS1 = createEdgeSet(jS1, EdgeRule.COMPATIBLE, DiagnosticRule.COUNT_ONLY);
+        //HashSet<Edge> eS2 = createEdgeSet(jS1, EdgeRule.INCOMPATIBLE, DiagnosticRule.PRINT_ALL);
+        writeFile(eS1, jS1, "eS1.mis");
     }
 
     private void readTrace(String fileName){
         jd_map = new HashMap<Integer, Integer>();
         loc_map = new HashMap<Integer, Integer>();
+        indexed_loc_map = new HashMap<Integer, Pair>();
+        indexed_jd_map = new HashMap<Integer, Pair>();
         jd_set = new HashSet<Integer>();
         loc_set = new HashSet<Integer>();
         jd_list = new ArrayList<Integer>();
         loc_list = new ArrayList<Integer>();
+
         String oneLine;
         int startLoc, nextLoc, jump, linesRead = 0;
         try{
-	    String fullFilePath = fileName;
-	    if (!fileName.startsWith("/")) {
-		fullFilePath = WORKING_DIR +File.separator+fileName;
-	    }
+            String fullFilePath = fileName;
+            if (!fileName.startsWith("/")) {
+                fullFilePath = WORKING_DIR +File.separator+fileName;
+            }
             File inputFile = new File(fullFilePath);
             BufferedReader reader = new BufferedReader(new FileReader(inputFile));
             System.out.println("'"+inputFile.getName()+"' found and successfully opened!");
@@ -69,7 +71,7 @@ public class GraphGenerator {
             oneLine = oneLine.trim().replaceAll("\\s+", " ");
             startLoc = Integer.parseInt(oneLine.split(" ")[1]);
             oneLine = reader.readLine(); linesRead++;
-            while (oneLine != null && linesRead != LINES_TO_READ){
+            do {
                 oneLine = oneLine.trim().replaceAll("\\s+", " ");
                 nextLoc = Integer.parseInt(oneLine.split(" ")[1]);
                 jump = startLoc - nextLoc;
@@ -89,7 +91,38 @@ public class GraphGenerator {
                 loc_set.add(startLoc);
                 startLoc = nextLoc;
                 oneLine = reader.readLine(); linesRead++;
+            } while (oneLine != null && linesRead != LINES_TO_READ);
+
+            /** Account for end of file and track final location **/
+            loc_list.add(nextLoc);
+            loc_set.add(nextLoc);
+
+            if (loc_map.containsKey(nextLoc)){
+                loc_map.put(nextLoc, loc_map.get(nextLoc)+1);
+            } else
+                loc_map.put(nextLoc, 1);
+
+
+            /** Create indexed maps **/
+            int item;
+            Collections.sort(loc_list);
+            for (int index = 0; index < loc_list.size(); index++){
+                item = loc_list.get(index);
+                if (indexed_loc_map.containsKey(item)){
+                    indexed_loc_map.put(item, new Pair(indexed_loc_map.get(item).count + 1, indexed_loc_map.get(item).index));
+                } else
+                    indexed_loc_map.put(item, new Pair(1, index));
             }
+
+            Collections.sort(jd_list);
+            for (int index = 0; index < jd_list.size(); index++){
+                item = jd_list.get(index);
+                if (indexed_jd_map.containsKey(item)){
+                    indexed_jd_map.put(item, new Pair(indexed_jd_map.get(item).count + 1, indexed_jd_map.get(item).index));
+                } else
+                    indexed_jd_map.put(item, new Pair(1, index));
+            }
+
         } catch (Exception e){
             System.out.println(e);
             System.out.println("Error Reading File");
@@ -99,17 +132,23 @@ public class GraphGenerator {
         System.out.println("Jump Distance and Location Histograms Created Successfully.");
     }
 
-    private boolean writeFile(List<Triple> outputList, String fileName){
+    private boolean writeFile(TreeSet<Edge> edgeSet, TreeSet<Node> nodeSet, String fileName){
+        Edge edge;
         try{
             File outputFile = new File(fileName);
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
-            Iterator<Triple> iter = outputList.iterator();
-            Triple tri;
+
+            writer.write("p edge " + loc_set.size() + " " + edgeSet.size());
+            //System.out.print("p edge " + loc_set.size() + " " + edgeSet.size());
+
+            Iterator<Edge> iter = edgeSet.iterator();
             while (iter.hasNext()){
-                tri = iter.next();
-                writer.write(tri.start+" "+tri.mid+" "+ tri.end);
-                writer.newLine();
+                edge = iter.next();
+                writer.write("\ne " + (nodeSet.headSet(edge.n1).size()+1) + " " + (nodeSet.headSet(edge.n2).size()+1));
+                //System.out.print("\ne " + (nodeSet.headSet(edge.n1).size()+1) + " " + (nodeSet.headSet(edge.n2).size()+1));
             }
+            writer.newLine();
+            writer.close();
         } catch (Exception e){
             System.out.println(e);
             System.out.println("Error Writing File");
@@ -120,118 +159,154 @@ public class GraphGenerator {
         return true;
     }
 
-    private HashSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations) {
-        HashSet<Node> jumpSet = new HashSet<Node>();
-        Iterator<Integer> locIter = locations.keySet().iterator();
+    private TreeSet<Node> createJumpSet(HashMap<Integer, Integer> jumps, HashMap<Integer, Integer> locations, DiagnosticRule dRule) {
+        TreeSet<Node> jumpSet = new TreeSet<Node>();
+        Iterator<Integer> locIter = indexed_loc_map.keySet().iterator();
         Iterator<Integer> jdIter;
-        int startLoc, jd, finalLoc;
-        int copies;
 
-        while (locIter.hasNext()) {
-            startLoc = locIter.next();
-            jdIter = jumps.keySet().iterator();
-            while (jdIter.hasNext()) {
+        int sl, jd, el;     //sl = starting point, jd = jump distance, el = ending point
+        while (locIter.hasNext()){
+            sl = locIter.next();
+            jdIter = indexed_jd_map.keySet().iterator();
+            while (jdIter.hasNext()){
                 jd = jdIter.next();
-                finalLoc = startLoc + jd;
-                if (locations.containsKey(finalLoc)) {
-                    
-		    //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
-		    
-                    copies = locations.get(startLoc);
-                    if (jumps.get(jd) < copies) {
-                        copies = jumps.get(jd);
-		    }
-                    if (locations.get(finalLoc) < copies) {
-                        copies = locations.get(finalLoc);
-		    }
-		    
-                    vertices = vertices+copies;
-
-                    for (int copy = copies; copy > 0; copy--){
-                        jumpSet.add(new Node(startLoc, jd, finalLoc, copy));
-                        //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
+                el = sl + jd;
+                if (indexed_loc_map.containsKey(el)){
+                    for (int i = 0; i < indexed_loc_map.get(sl).count; i++){
+                        for (int j = 0; j < indexed_jd_map.get(jd).count; j++){
+                            for (int k = 0; k < indexed_loc_map.get(el).count; k++){
+                                jumpSet.add(new Node(indexed_loc_map.get(sl).index + i, indexed_jd_map.get(jd).index + j, indexed_loc_map.get(el).index + k));
+                            }
+                        }
                     }
                 }
             }
         }
-        //vertices = jumpSet.size();
-        System.out.println("Vertices: " + vertices);
-	System.out.println("Set size: " + jumpSet.size());
+
+        if (dRule == DiagnosticRule.COUNT_ONLY){
+            System.out.println("Set size: " + jumpSet.size());
+        } else if (dRule == DiagnosticRule.PRINT_ALL){
+            System.out.println("Set size: " + jumpSet.size());
+            for (Node n: jumpSet){
+                System.out.println(n.toString());
+            }
+            System.out.println();
+        }
         return jumpSet;
+
     }
 
-    private HashSet<Edge> createEdgeSet(HashSet<Node> jumpSet, EdgeRule type, boolean countOnly){
-        HashSet<Edge> edgeSet = new HashSet<Edge>();
-	int count = 0;
+    private TreeSet<Edge> createEdgeSet(TreeSet<Node> jumpSet, EdgeRule eRule, DiagnosticRule dRule){
+        HashSet<Edge> edgeHashSet = new HashSet<Edge>();
+        TreeSet<Edge> edgeTreeSet = new TreeSet<Edge>();
+
             for (Node n1 :jumpSet){
                 for (Node n2: jumpSet){
-                    if (type == EdgeRule.COMPATIBLE){
+                    if (eRule == EdgeRule.COMPATIBLE){
+                        /** v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end) **/
                         if ((n1.startLoc != n2.startLoc) && (n1.jumpDistance != n2.jumpDistance) && (n1.endLocation != n2.endLocation)){
-			    if (!countOnly)  {
-				edgeSet.add(new Edge(n1, n2));
-			    }
-			    count++;
+                            //if (!edgeSet.contains(new Edge(n1, n2))){
+                            edgeHashSet.add(new Edge(n1, n2));
+                            edgeTreeSet.add(new Edge(n1, n2));
+                            //}
                         }
                     } else {
-                        if ((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) {
-			    if (!countOnly) {
-				edgeSet.add(new Edge(n1, n2));
-			    }
-			count++;
-			}
+                        /** v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end) **/
+                        if (((n1.startLoc == n2.startLoc) || (n1.jumpDistance == n2.jumpDistance) || (n1.endLocation == n2.endLocation)) && ( ! n1.equals(n2))) {
+                            //if (!edgeSet.contains(new Edge(n1, n2))){
+                            edgeHashSet.add(new Edge(n1, n2));
+                            edgeTreeSet.add(new Edge(n1, n2));
+                            //}
+                        }
                     }
-	    if (count % 1000000 == 0) {
-		System.out.print(".");
-		//	System.out.println(count  + " so far");
-	    }
                 }
             }
 
-	    System.out.println("\nNumber of edges: " + count);
-        return edgeSet;
+        if (dRule == DiagnosticRule.COUNT_ONLY){
+            System.out.println("Number of edges =" + edgeTreeSet.size() + " using "+eRule.toString() + " rule.");
+        } else if (dRule == DiagnosticRule.PRINT_ALL) {
+            System.out.println("Number of edges =" + edgeTreeSet.size() + " using "+eRule.toString() + " rule.");
+            for (Edge e: edgeTreeSet){
+                System.out.println(e.n1.toString()+":"+e.n2.toString());
+            }
+        }
+
+        return edgeTreeSet;
     }
-
-    /**
-     1)
-     v1 and v2 have an edge between them if (v1.start != v2.start && v1.jd != v2.jd && v1.end != v2.end)
-
-     2)
-     v1 and v2 have an edge between them if v1.start == v2.start || v1.jd == v2.jd || v1.end == v2.end)
-     */
 }
 
 class Node implements Comparable<Node>{
-    public int startLoc, jumpDistance, endLocation, id;
+    public int startLoc, jumpDistance, endLocation;
 
     public Node(){}
 
-    public Node(int start, int jump, int end, int id){
+    public Node(int start, int jump, int end){
         this.startLoc = start;
         this.jumpDistance = jump;
         this.endLocation = end;
-        this.id = id;
+    }
+
+    public boolean equals(Node o){
+        if (this.startLoc == o.startLoc && this.jumpDistance == o.jumpDistance && this.endLocation == o.endLocation)
+            return true;
+
+        return false;
     }
 
     @Override
     public int compareTo(Node o) {
-        return startLoc - o.startLoc;
+        if (this.startLoc != o.startLoc) {
+            return this.startLoc - o.startLoc;
+        } else if (this.jumpDistance != o.jumpDistance) {
+            return this.jumpDistance - o.jumpDistance;
+        } else {
+            return this.endLocation - o.endLocation;
+        }
+    }
+
+    @Override
+    public String toString(){
+        return startLoc+","+jumpDistance+","+endLocation;
+        //return "("+startLoc+","+jumpDistance+","+endLocation+")";
     }
 }
 
-class Edge{
+class Edge implements Comparable<Edge>{
     public Node n1, n2;
 
     public Edge(){}
 
     public Edge(Node n1, Node n2){
-        this.n1 = n1;
-        this.n2 = n2;
+        if (n1.compareTo(n2) > 0){
+            this.n2 = n1;
+            this.n1 = n2;
+        } else {
+            this.n1 = n1;
+            this.n2 = n2;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return this.toString().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object arg0) {
+        return true; /** assumes no hashcode collisions, not safe on larger data sets **/
     }
 
     @Override
     public String toString(){
-        String val = n1.startLoc+","+n2.startLoc;
-        return val;
+        return n1.toString()+":"+n2.toString();
+    }
+
+    @Override
+    public int compareTo(Edge o) {
+        if (this.n1.compareTo(o.n1) != 0){
+            return this.n1.compareTo(o.n1);
+        }
+        return this.n2.compareTo(o.n2);  //To change body of implemented methods use File | Settings | File Templates.
     }
 }
 
@@ -252,18 +327,18 @@ class Triple implements Comparable<Triple> {
     }
 }
 class Pair implements Comparable<Pair>{
-    public int key, count;
+    public int count, index;
 
     public Pair(){}
 
-    public Pair(int key, int count){
-        this.key = key;
+    public Pair(int count, int index){
         this.count = count;
+        this.index = index;
     }
 
     @Override
     public int compareTo(Pair o) {
-        return this.key - o.key;
+        return this.index - o.index;
     }
 }
 
@@ -297,4 +372,57 @@ class Pair implements Comparable<Pair>{
  System.exit(1);
  }
  return histogram;
- }**/
+ }
+
+
+ HashSet<Node> jumpSet = new HashSet<Node>();
+ Iterator<Integer> locIter = locations.keySet().iterator();
+ Iterator<Integer> jdIter;
+ int startLoc, jd, finalLoc;
+ int slCounter = 0;
+ int jCounter = 0;
+ int flCounter = 0;
+
+ while (locIter.hasNext()) {
+ startLoc = locIter.next();
+ slCounter++;
+ jdIter = jumps.keySet().iterator();
+ while (jdIter.hasNext()) {
+ jd = jdIter.next();
+ jCounter++;
+ if (jd != 0){
+ finalLoc = startLoc + jd;
+ if (locations.containsKey(finalLoc)) {
+
+ for (int i = slCounter; i < slCounter + locations.get(startLoc); i++){
+ for (int j = jCounter; j < jCounter + locations.get(jd); j++){
+ for (int k = flCounter; k < flCounter + locations.get(finalLoc); k++){
+ jumpSet.add(new Node (i, j, k));
+ }
+ }
+ }
+ //copies = (locations.get(startLoc)*jumps.get(jd)*locations.get(finalLoc));
+ //vertices = vertices+copies;
+
+ //for (int copy = copies; copy > 0; copy--){
+ //jumpSet.add(new Node(startLoc, jd, finalLoc));
+ //System.out.println("Node:"+startLoc+","+jd+","+finalLoc+","+copy);
+ //}
+ }
+ }
+ jCounter = jCounter + locations.get(jd);
+ }
+ slCounter = slCounter + locations.get(startLoc);
+ }
+ //vertices = jumpSet.size();
+ System.out.println("Vertices: " + vertices);
+ System.out.println("Set size: " + jumpSet.size());
+ return jumpSet;
+
+ long startTime = System.currentTimeMillis();
+ long stopTime = System.currentTimeMillis();
+ long runTime = stopTime - startTime;
+ System.out.println("Run time: " + runTime);
+
+
+ **/
