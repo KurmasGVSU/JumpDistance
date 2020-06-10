@@ -4,6 +4,8 @@ output.data
 out/
 .idea/
 junk/
+lib/
+logs/
 
 *.py[cod]
 
@@ -22,7 +24,7 @@ var
 sdist
 develop-eggs
 .installed.cfg
-lib
+#lib
 lib64
 
 # Installer logs
